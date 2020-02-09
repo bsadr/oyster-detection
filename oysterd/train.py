@@ -17,12 +17,13 @@ import os
 import cv2
 import argparse
 # oyster detection
-from oysterd.annotations import labelmeDict, makesenseDict
-import oysterd.config
+from annotations import labelmeDict, makesenseDict
+from config import Config, InputType
 
-def register(oyster_cfg)
+
+def register(oyster_cfg):
     for d in ["train", "val"]:
-        if oyster_cfg.input == oysterd.config.InputType.labelme :
+        if oyster_cfg.input == config.InputType.labelme :
             DatasetCatalog.register("oyster_" + d,
                                     lambda d=d: labelmeDict(os.path.join(oyster_cfg.folders['data'], d)))
         else:
