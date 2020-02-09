@@ -1,0 +1,121 @@
+import json
+import cv2
+from os import listdir
+from os.path import isfile, join
+from detectron2.structures import BoxMode
+
+
+# export to labelme format
+def toLabelme(fname, shapes, imagepath, imageheight, imagewidth):
+    data = dict(
+        version='4.1.1',
+        flags=None,
+        shapes=shapes,
+        imagePath=imagepath,
+        imageData=None,
+        imageHeight=imageheight,
+        imageWidth=imagewidth,
+    )
+    try:
+        with open(fname, 'w') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        raise e
+
+
+# make labelme shape
+def makeShapes(masks, step=16, label='oyster'):
+    shapes = []
+    # contours = []
+    contours = []
+    for i, mask in enumerate(masks):
+        contour, _ = cv2.findContours(mask.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contour = contour[0].tolist()
+        contours.append(contour)
+        cn = []
+        contour2 = [cn+c for j, c in enumerate(contour) if j % step == 0]
+        points = []
+        for c in contour2:
+            points.append(c[0])
+        shape = dict(
+            group_id=None,
+            label=label,
+            points=points,
+            shape_type="polygon",
+            flags={}
+        )
+        shapes.append(shape)
+    return shapes, contours
+
+
+# labelme to detectron2 dict
+def labelmeDict(img_dir, json_dir):
+    json_files = [f for f in listdir(json_dir)
+                  if isfile(join(json_dir, f)) and f.lower().split('.')[-1] == 'json']
+    dataset_dicts = []
+    for json_file in json_files:
+        with open(json_file) as f:
+            label_me = json.load(f)
+            record = {}
+            fname = os.path.join(img_dir, label_me["imagePath"])
+            record["file_name"] = fname
+            record["image_id"] = label_me["imagePath"]
+            record["height"] = label_me["imageHeight"]
+            record["width"] = label_me["imagewidth"]
+            shapes = label_me["shapes"]
+            objs = []
+            for shape in shapes.items():
+                points = shape["points"]
+                px, py = [], []
+                for p in points:
+                    px.append(p[0])
+                    py.append(p[1])
+                poly = [(x + 0.5, y + 0.5) for x, y in zip(px, py)]
+                poly = [p for x in poly for p in x]
+                obj = {
+                    "bbox": [np.min(px), np.min(py), np.max(px), np.max(py)],
+                    "bbox_mode": BoxMode.XYXY_ABS,
+                    "segmentation": [poly],
+                    "category_id": 0,
+                    "iscrowd": 0
+                }
+                objs.append(obj)
+            record["annotations"] = objs
+            dataset_dicts.append(record)
+    return dataset_dicts
+
+
+# makesense to detectron2 dict
+def makesenseDict(img_dir):
+    json_file = os.path.join(img_dir, "via_region_data.json")
+    with open(json_file) as f:
+        imgs_anns = json.load(f)
+    dataset_dicts = []
+    for idx, v in enumerate(imgs_anns.values()):
+        record = {}
+        fname = os.path.join(img_dir, v["filename"])
+        height, width = cv2.imread(fname).shape[:2]
+        record["file_name"] = fname
+        record["image_id"] = idx
+        record["height"] = height
+        record["width"] = width
+        annos = v["regions"]
+        objs = []
+        for _, anno in annos.items():
+            # assert not anno["region_attributes"]
+            anno = anno["shape_attributes"]
+            px = anno["all_points_x"]
+            py = anno["all_points_y"]
+            poly = [(x + 0.5, y + 0.5) for x, y in zip(px, py)]
+            poly = [p for x in poly for p in x]
+            obj = {
+                "bbox": [np.min(px), np.min(py), np.max(px), np.max(py)],
+                "bbox_mode": BoxMode.XYXY_ABS,
+                "segmentation": [poly],
+                "category_id": 0,
+                "iscrowd": 0
+            }
+            objs.append(obj)
+        record["annotations"] = objs
+        dataset_dicts.append(record)
+    return dataset_dicts
