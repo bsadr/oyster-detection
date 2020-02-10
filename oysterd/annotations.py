@@ -49,7 +49,8 @@ def makeShapes(masks, step=16, label='oyster'):
 
 
 # labelme to detectron2 dict
-def labelmeDict(img_dir, json_dir):
+def labelmeDict(data_dir, sub_dir):
+    json_dir = os.path.join(data_dir, "json/{}".format(sub_dir))
     json_files = [f for f in listdir(json_dir)
                   if isfile(join(json_dir, f)) and f.lower().split('.')[-1] == 'json']
     dataset_dicts = []
@@ -57,7 +58,7 @@ def labelmeDict(img_dir, json_dir):
         with open(json_file) as f:
             label_me = json.load(f)
             record = {}
-            fname = os.path.join(img_dir, label_me["imagePath"])
+            fname = os.path.join(os.path.join(data_dir, "img/{}/".format(sub_dir)), label_me["imagePath"])
             record["file_name"] = fname
             record["image_id"] = label_me["imagePath"]
             record["height"] = label_me["imageHeight"]
@@ -86,14 +87,14 @@ def labelmeDict(img_dir, json_dir):
 
 
 # makesense to detectron2 dict
-def makesenseDict(img_dir):
-    json_file = os.path.join(img_dir, "via_region_data.json")
+def makesenseDict(data_dir, sub_dir):
+    json_file = os.path.join(data_dir, "img/{}/via_region_data.json".format(sub_dir))
     with open(json_file) as f:
         imgs_anns = json.load(f)
     dataset_dicts = []
     for idx, v in enumerate(imgs_anns.values()):
         record = {}
-        fname = os.path.join(img_dir, v["filename"])
+        fname = os.path.join(os.path.join(data_dir, "img/{}/".format(sub_dir)), v["filename"])
         height, width = cv2.imread(fname).shape[:2]
         record["file_name"] = fname
         record["image_id"] = idx

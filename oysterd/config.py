@@ -9,10 +9,10 @@ class InputType(Enum):
 
 class Config(object):
     folders = dict(
-        data="/home/bsadrfa/behzad/projects/data_oyster/database/",
+        data="/home/bsadrfa/behzad/projects/data_oyster/data/",
         save="/home/bsadrfa/behzad/projects/data_oyster/img_poly/",
-        img="/home/bsadrfa/behzad/projects/data_oyster/img/",
-        json="/home/bsadrfa/behzad/projects/data_oyster/json/",
+        # img="/home/bsadrfa/behzad/projects/data_oyster/img/",
+        # json="/home/bsadrfa/behzad/projects/data_oyster/json/",
         pred="/home/bsadrfa/behzad/projects/data_oyster/img_pred/",
         model="/home/bsadrfa/behzad/projects/data_oyster/model/",
         output="./output/"

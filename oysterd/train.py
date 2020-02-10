@@ -23,7 +23,7 @@ from config import Config, InputType
 
 def register(oyster_cfg):
     for d in ["train", "val"]:
-        if oyster_cfg.input == InputType.labelme :
+        if oyster_cfg.input == InputType.labelme:
             DatasetCatalog.register("oyster_" + d,
                                     lambda d=d: labelmeDict(os.path.join(oyster_cfg.folders['data'], d), os.path.join(oyster_cfg.folders['json'], d)))
         else:
