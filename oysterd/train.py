@@ -11,6 +11,8 @@ from detectron2.utils.visualizer import Visualizer
 from detectron2.engine import DefaultTrainer
 from detectron2.data import DatasetCatalog, MetadataCatalog
 from detectron2.utils.visualizer import ColorMode
+from detectron2.evaluation import COCOEvaluator, inference_on_dataset
+from detectron2.data import build_detection_test_loader
 
 # Other packages
 import os
@@ -32,6 +34,7 @@ def register(oyster_cfg):
         MetadataCatalog.get("oyster_" + d).set(thing_classes=["oyster"])
     return MetadataCatalog.get("oyster_train")
 
+
 def train(oyster_cfg, cfg_id=0):
     cfg = get_cfg()
     # Let training initialize from model zoo
@@ -40,27 +43,24 @@ def train(oyster_cfg, cfg_id=0):
     cfg.DATASETS.TEST = ("oyster_val",)
     cfg.DATALOADER.NUM_WORKERS = 2
     cfg.OUTPUT_DIR = os.path.join(oyster_cfg.folders['output'], '{:02d}'.format(cfg_id))
-    print(oyster_cfg.config_file[cfg_id])
-    print(model_zoo.get_checkpoint_url(oyster_cfg.config_file[cfg_id]))
+    os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
     cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url(oyster_cfg.config_file[cfg_id])
     cfg.SOLVER.IMS_PER_BATCH = 2
     cfg.SOLVER.BASE_LR = oyster_cfg.SOLVER_BASE_LR
     cfg.SOLVER.MAX_ITER = oyster_cfg.SOLVER_MAX_ITER
     cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 256  # faster, and good enough for this toy dataset (default: 512)
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only has one class (oyster)
-
-    os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
     trainer = DefaultTrainer(cfg)
-    trainer.resume_or_load(resume=True)
+    trainer.resume_or_load(oyster_cfg.resume)
     trainer.train()
-    return cfg
+    oyster_cfg.log(cfg_id)
+    return trainer, cfg
 
 
 def predictor(oyster_cfg, cfg, cfg_id=0):
     cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "model_final.pth")
     cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = oyster_cfg.thresh_percent * .01
-    cfg.DATASETS.TEST = ("oyster_val",)
-    return  DefaultPredictor(cfg)
+    return DefaultPredictor(cfg)
 
 
 def infer(oyster_cfg, oyster_metadata):
@@ -97,7 +97,12 @@ if __name__ == '__main__':
     assert (args.cfg_id <= len(oyster_cfg.config_file))
 
     oyster_metadata = register(oyster_cfg)
-    detectron_cfg = train(oyster_cfg, args.cfg_id)
+    trainer, detectron_cfg = train(oyster_cfg, args.cfg_id)
+
+    evaluator = COCOEvaluator("oyster_val", detectron_cfg, False, output_dir=detectron_cfg.OUTPUT_DIR)
+    val_loader = build_detection_test_loader(detectron_cfg, "oyster_val")
+    inference_on_dataset(trainer.model, val_loader, evaluator)
+
     # predictor(oyster_cfg, detectron_cfg, args.cfg_id)
     # infer(oyster_cfg, oyster_metadata)
 

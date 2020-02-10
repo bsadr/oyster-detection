@@ -1,6 +1,8 @@
 import os
 from enum import Enum
-
+import datetime
+from os.path import join
+import json
 
 class InputType(Enum):
     labelme = 0
@@ -32,3 +34,20 @@ class Config(object):
                 os.makedirs(f, exist_ok=True)
             except OSError:
                 print("Error creating {}".format(f))
+
+    def log(self, cfg_id=0, access_mode='a'):
+        data = dict(
+            SOLVER_BASE_LR=self.SOLVER_BASE_LR,
+            SOLVER_MAX_ITER=self.SOLVER_MAX_ITER,
+            config_file=self.config_file[cfg_id],
+            resume=self.resume,
+            thresh_percent=self.thresh_percent,
+            id=id,
+            datetime=datetime.datetime.now(),
+        )
+        fname = join(join(oyster_cfg.folders['output'], '{:02d}'.format(cfg_id)), 'oyster_cfg.txt')
+        try:
+            with open(fname, access_mode) as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            print("Error dumping json file {}".format(fname))
