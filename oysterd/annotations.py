@@ -1,6 +1,7 @@
 import json
 import cv2
 import os
+import numpy as np
 from os import listdir
 from os.path import isfile, join
 from detectron2.structures import BoxMode
@@ -52,7 +53,7 @@ def makeShapes(masks, step=16, label='oyster'):
 # labelme to detectron2 dict
 def labelmeDict(data_dir, sub_dir):
     json_dir = os.path.join(data_dir, "json/{}".format(sub_dir))
-    json_files = [f for f in listdir(json_dir)
+    json_files = [os.path.join(json_dir, f) for f in listdir(json_dir)
                   if isfile(join(json_dir, f)) and f.lower().split('.')[-1] == 'json']
     dataset_dicts = []
     for json_file in json_files:
@@ -63,10 +64,10 @@ def labelmeDict(data_dir, sub_dir):
             record["file_name"] = fname
             record["image_id"] = label_me["imagePath"]
             record["height"] = label_me["imageHeight"]
-            record["width"] = label_me["imagewidth"]
+            record["width"] = label_me["imageWidth"]
             shapes = label_me["shapes"]
             objs = []
-            for shape in shapes.items():
+            for shape in shapes:
                 points = shape["points"]
                 px, py = [], []
                 for p in points:
