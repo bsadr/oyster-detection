@@ -25,10 +25,10 @@ def register(oyster_cfg):
     for d in ["train", "val"]:
         if oyster_cfg.input == InputType.labelme:
             DatasetCatalog.register("oyster_" + d,
-                                    lambda d=d: labelmeDict(os.path.join(oyster_cfg.folders['data'], d), os.path.join(oyster_cfg.folders['json'], d)))
+                                    lambda d=d: labelmeDict(oyster_cfg.folders['data'], d))
         else:
             DatasetCatalog.register("oyster_" + d,
-                                    lambda d=d: makesenseDict(os.path.join(oyster_cfg.folders['data'], d)))
+                                    lambda d=d: makesenseDict(oyster_cfg.folders['data'], d))
         MetadataCatalog.get("oyster_" + d).set(thing_classes=["oyster"])
     return MetadataCatalog.get("oyster_train")
 
