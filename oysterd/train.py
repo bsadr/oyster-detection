@@ -39,6 +39,9 @@ def train(oyster_cfg, cfg_id=0):
     cfg.DATASETS.TRAIN = ("oyster_train",)
     cfg.DATASETS.TEST = ("oyster_val",)
     cfg.DATALOADER.NUM_WORKERS = 2
+    cfg.OUTPUT_DIR = os.path.join(oyster_cfg.folders['output'], '{:02d}'.format(cfg_id))
+    print(oyster_cfg.config_file[cfg_id])
+    print(model_zoo.get_checkpoint_url(oyster_cfg.config_file[cfg_id]))
     cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url(oyster_cfg.config_file[cfg_id])
     cfg.SOLVER.IMS_PER_BATCH = 2
     cfg.SOLVER.BASE_LR = oyster_cfg.SOLVER_BASE_LR
@@ -46,10 +49,9 @@ def train(oyster_cfg, cfg_id=0):
     cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 256  # faster, and good enough for this toy dataset (default: 512)
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only has one class (oyster)
 
-    cfg.OUTPUT_DIR = os.path.join(oyster_cfg.folders['output'], '{:02d}'.format(cfg_id))
     os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
     trainer = DefaultTrainer(cfg)
-    trainer.resume_or_load(resume=False)
+    trainer.resume_or_load(resume=True)
     trainer.train()
     return cfg
 
@@ -96,6 +98,6 @@ if __name__ == '__main__':
 
     oyster_metadata = register(oyster_cfg)
     detectron_cfg = train(oyster_cfg, args.cfg_id)
-    predictor(oyster_cfg, detectron_cfg, args.cfg_id)
-    infer(oyster_cfg, oyster_metadata)
+    # predictor(oyster_cfg, detectron_cfg, args.cfg_id)
+    # infer(oyster_cfg, oyster_metadata)
 

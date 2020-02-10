@@ -15,7 +15,7 @@ class Config(object):
         # json="/home/bsadrfa/behzad/projects/data_oyster/json/",
         pred="/home/bsadrfa/behzad/projects/data_oyster/img_pred/",
         model="/home/bsadrfa/behzad/projects/data_oyster/model/",
-        output="./output/"
+        output="/home/bsadrfa/behzad/projects/output_oyster/"
     )
     SOLVER_IMS_PER_BATCH = 2
     SOLVER_BASE_LR = 0.00025

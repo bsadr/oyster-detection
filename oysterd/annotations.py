@@ -70,6 +70,9 @@ def labelmeDict(data_dir, sub_dir):
             for shape in shapes:
                 points = shape["points"]
                 px, py = [], []
+                if len(points) <= 3:
+                    print("Warning: A polygon with less than 3 points in {}.".format(json_file))
+                    continue
                 for p in points:
                     px.append(p[0])
                     py.append(p[1])
