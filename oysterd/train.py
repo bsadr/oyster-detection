@@ -23,9 +23,9 @@ from config import Config, InputType
 
 def register(oyster_cfg):
     for d in ["train", "val"]:
-        if oyster_cfg.input == config.InputType.labelme :
+        if oyster_cfg.input == InputType.labelme :
             DatasetCatalog.register("oyster_" + d,
-                                    lambda d=d: labelmeDict(os.path.join(oyster_cfg.folders['data'], d)))
+                                    lambda d=d: labelmeDict(os.path.join(oyster_cfg.folders['data'], d), os.path.join(oyster_cfg.folders['json'], d)))
         else:
             DatasetCatalog.register("oyster_" + d,
                                     lambda d=d: makesenseDict(os.path.join(oyster_cfg.folders['data'], d)))
@@ -46,7 +46,7 @@ def train(oyster_cfg, cfg_id=0):
     cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 256  # faster, and good enough for this toy dataset (default: 512)
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only has one class (oyster)
 
-    cfg.OUTPUT_DIR = os.path.join(oyster_cfg.folders['output'], '{.d02}'.format(id))
+    cfg.OUTPUT_DIR = os.path.join(oyster_cfg.folders['output'], '{:02d}'.format(cfg_id))
     os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
     trainer = DefaultTrainer(cfg)
     trainer.resume_or_load(resume=False)
@@ -86,12 +86,12 @@ def infer(oyster_cfg, oyster_metadata):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-i", required=Flase,
+    parser.add_argument("-i", required=False,
                         dest="cfg_id",
                         default=0,
                         help="detecron2 model id (in oyster config file)")
     args = parser.parse_args()
-    oyster_cfg = oysterd.config.Config
+    oyster_cfg = Config
     assert (args.cfg_id <= len(oyster_cfg.config_file))
 
     oyster_metadata = register(oyster_cfg)
