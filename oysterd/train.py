@@ -50,10 +50,10 @@ def train(oyster_cfg, cfg_id=0):
     cfg.SOLVER.MAX_ITER = oyster_cfg.SOLVER_MAX_ITER
     cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 256  # faster, and good enough for this toy dataset (default: 512)
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only has one class (oyster)
+    oyster_cfg.log_model()
     trainer = DefaultTrainer(cfg)
     trainer.resume_or_load(oyster_cfg.resume)
     trainer.train()
-    oyster_cfg.log(cfg_id)
     return trainer, cfg
 
 
@@ -61,6 +61,13 @@ def predictor(oyster_cfg, cfg, cfg_id=0):
     cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "model_final.pth")
     cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = oyster_cfg.thresh_percent * .01
     return DefaultPredictor(cfg)
+
+
+def evaluate(cfg, trainer):
+    evaluator = COCOEvaluator("oyster_val", cfg, False, output_dir=cfg.OUTPUT_DIR)
+    val_loader = build_detection_test_loader(cfg, "oyster_val")
+    results = inference_on_dataset(trainer.model, val_loader, evaluator)
+    oyster_cfg.log(results)
 
 
 def infer(oyster_cfg, oyster_metadata):
@@ -86,6 +93,7 @@ def infer(oyster_cfg, oyster_metadata):
         cv2.imwrite(os.path.join(oyster_cfg.folders['save'], "{}_ground_truth.jpg".format(d["image_id"])),
                     vis.get_image()[:, :, ::-1])
 
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", required=False,
@@ -93,15 +101,13 @@ if __name__ == '__main__':
                         default=0,
                         help="detecron2 model id (in oyster config file)")
     args = parser.parse_args()
-    oyster_cfg = Config
-    assert (args.cfg_id <= len(oyster_cfg.config_file))
+    cfg_id = int(args.cfg_id)
+    oyster_cfg = Config(cfg_id)
+    assert (cfg_id <= len(oyster_cfg.config_file))
 
     oyster_metadata = register(oyster_cfg)
-    trainer, detectron_cfg = train(oyster_cfg, args.cfg_id)
-
-    evaluator = COCOEvaluator("oyster_val", detectron_cfg, False, output_dir=detectron_cfg.OUTPUT_DIR)
-    val_loader = build_detection_test_loader(detectron_cfg, "oyster_val")
-    inference_on_dataset(trainer.model, val_loader, evaluator)
+    trainer, detectron_cfg = train(oyster_cfg, cfg_id)
+    evaluate(detectron_cfg, trainer)
 
     # predictor(oyster_cfg, detectron_cfg, args.cfg_id)
     # infer(oyster_cfg, oyster_metadata)

@@ -5,13 +5,13 @@ import numpy as np
 from os import listdir
 from os.path import isfile, join
 from detectron2.structures import BoxMode
-
+import shutil
 
 # export to labelme format
 def toLabelme(fname, shapes, imagepath, imageheight, imagewidth):
     data = dict(
         version='4.1.1',
-        flags=None,
+        flags={},
         shapes=shapes,
         imagePath=imagepath,
         imageData=None,
@@ -125,3 +125,39 @@ def makesenseDict(data_dir, sub_dir):
         record["annotations"] = objs
         dataset_dicts.append(record)
     return dataset_dicts
+
+
+# export makesense to labelme
+def exp_makesense_labelme(data_dir, sub_dir):
+    json_file = os.path.join(data_dir, "{}/via_region_data.json".format(sub_dir))
+    json_dir = os.path.join(data_dir, "json/{}/".format(sub_dir))
+    try:
+        os.makedirs(json_dir, exist_ok=True)
+    except OSError:
+        print("Error creating {}".format(json_dir))
+
+    with open(json_file) as f:
+        imgs_anns = json.load(f)
+    for v in imgs_anns.values():
+        fname = v["filename"]
+        img_path = os.path.join(os.path.join(data_dir, "{}/".format(sub_dir)), fname)
+        print(shutil.copy(img_path, json_dir))
+        height, width = cv2.imread(img_path).shape[:2]
+        annos = v["regions"]
+        shapes = []
+        for _, anno in annos.items():
+            # assert not anno["region_attributes"]
+            anno = anno["shape_attributes"]
+            px = anno["all_points_x"]
+            py = anno["all_points_y"]
+            points = [[x, y] for x, y in zip(px, py)]
+            shape = dict(
+                group_id=None,
+                label='oyster',
+                points=points,
+                shape_type="polygon",
+                flags={}
+            )
+            shapes.append(shape)
+        json_name = os.path.join(json_dir, fname[:-4]+'.json')
+        toLabelme(json_name, shapes, fname, height, width)
