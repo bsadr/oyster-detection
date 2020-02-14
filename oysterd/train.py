@@ -85,7 +85,7 @@ def infer(oyster_cfg, cfg, oyster_metadata, cfg_id=0):
                        )
         v = v.draw_instance_predictions(outputs["instances"].to("cpu"))
         print(os.path.join(pr_dir, d["image_id"]))
-        cv2.imwrite(os.path.join(prls_dir, d["image_id"]),
+        cv2.imwrite(os.path.join(pr_dir, d["image_id"]),
                     v.get_image()[:, :, ::-1])
         # Ground Truth
         img = cv2.imread(d["file_name"])
