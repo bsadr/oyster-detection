@@ -12,28 +12,37 @@ class InputType(Enum):
 
 class Config:
     folders = dict(
-        data="/home/bsadrfa/behzad/projects/data_oyster/data/",
-        save="/home/bsadrfa/behzad/projects/data_oyster/img_poly/",
-        # img="/home/bsadrfa/behzad/projects/data_oyster/img/",
-        # json="/home/bsadrfa/behzad/projects/data_oyster/json/",
+        # data="/home/bsadrfa/behzad/projects/data_oyster/data/",
+        # data="/home/bsadrfa/behzad/projects/data_oyster/don_matt/",
+        data="/home/bsadrfa/behzad/projects/data_oyster/db2/",
+        save="/home/bsadrfa/behzad/projects/data_oyster/output/predictions",
+        ground_truth="/home/bsadrfa/behzad/projects/data_oyster/output/ground_truth",
         makesense="/home/bsadrfa/behzad/projects/data_oyster/database/",
         pred="/home/bsadrfa/behzad/projects/data_oyster/img_pred/",
         model="/home/bsadrfa/behzad/projects/data_oyster/model/",
         # output="/home/bsadrfa/behzad/projects/output_oyster/"
-        output="../output/"
+        output="output/"
     )
     SOLVER_IMS_PER_BATCH = 2
     SOLVER_BASE_LR = 0.00025
-    SOLVER_MAX_ITER = 100
+    SOLVER_MAX_ITER = 300
     config_file = [
         "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml",
+        "COCO-InstanceSegmentation/mask_rcnn_R_50_DC5_3x.yaml",
+        "COCO-InstanceSegmentation/mask_rcnn_R_50_C4_3x.yaml",
         "COCO-InstanceSegmentation/mask_rcnn_R_101_FPN_3x.yaml",
+        "COCO-InstanceSegmentation/mask_rcnn_R_101_DC5_3x.yaml",
+        "COCO-InstanceSegmentation/mask_rcnn_R_101_C4_3x.yaml",
+        "COCO-Detection/retinanet_R_50_FPN_3x.yaml",
         "COCO-Detection/retinanet_R_101_FPN_3x.yaml",
-        "COCO-Detection/rpn_R_50_FPN_1x.yaml"
+        "COCO-Detection/rpn_R_50_FPN_1x.yaml",
+        "COCO-Detection/rpn_R_50_C4_1x.yaml",
+        "COCO-Detection/fast_rcnn_R_50_FPN_1x.yaml"
     ]
+    resume = False
     MODEL_WEIGHTS = ["model_final.pth"]
-    resume = True
-    thresh_percent = 25
+
+    thresh_percent = 30
     input = InputType.labelme
 
     def __init__(self, cfg_id=0):

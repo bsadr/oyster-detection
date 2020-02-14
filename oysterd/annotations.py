@@ -71,7 +71,7 @@ def labelmeDict(data_dir, sub_dir):
                 points = shape["points"]
                 px, py = [], []
                 if len(points) <= 3:
-                    print("Warning: A polygon with less than 3 points in {}.".format(json_file))
+                    # print("Warning: A polygon with less than 3 points in {}.".format(json_file))
                     continue
                 for p in points:
                     px.append(p[0])
@@ -161,3 +161,43 @@ def exp_makesense_labelme(data_dir, sub_dir):
             shapes.append(shape)
         json_name = os.path.join(json_dir, fname[:-4]+'.json')
         toLabelme(json_name, shapes, fname, height, width)
+
+
+def draw(dict):
+    colors = [(128, 0, 0), (255, 0, 0), (25, 25, 112), (0, 0, 0)]
+    # colors = [(128, 0, 0), (255, 0, 0), (255, 127, 80), (255, 215, 0),
+    #           (189, 183, 107), (255, 255, 0), (25, 25, 112), (210, 105, 30),
+    #           (0, 0, 0), (112, 128, 144), (205, 133, 63)]
+    for d in dict:
+        fname = d["file_name"]
+        [dname, bname] = os.path.split(fname)
+        if len(bname) > 8:
+            bname = bname.split('_')[1]
+            if bname[0] == '0':
+                bname = bname[1:]
+        fname = os.path.join(dname, bname)
+        im = cv2.imread(fname)
+        objs = d["annotations"]
+        contours = []
+        for i, obj in enumerate(objs):
+            poly = obj["segmentation"][0]
+            points = []
+            for j in range(0, len(poly), 2):
+                points.append(poly[j:j+2])
+            # contours.append(np.array([points],  dtype=np.int32))
+            contours = [np.array([points],  dtype=np.int32)]
+            bbox = obj["bbox"]
+            center = (int(.5*(bbox[0]+bbox[2])), int(.5*(bbox[1]+bbox[3])))
+            im = cv2.putText(im, '{:d}'.format(i+1), center,
+                             cv2.FONT_HERSHEY_DUPLEX, 2, colors[i % len(colors)], 4, cv2.LINE_AA)
+            cv2.drawContours(im, contours, -1, colors[i % len(colors)], 3)
+        # cv2.drawContours(im, contours, -1, (0, 255, 0), 2)
+        save_dir = os.path.join(dname, 'draw')
+        try:
+            os.makedirs(save_dir, exist_ok=True)
+        except OSError:
+            print("Error creating {}".format(save_dir))
+
+        print(os.path.join(save_dir, bname))
+        cv2.imwrite(os.path.join(save_dir, bname), im)
+

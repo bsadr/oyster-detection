@@ -37,13 +37,12 @@ def register(oyster_cfg):
 
 def train(oyster_cfg, cfg_id=0):
     cfg = get_cfg()
+    cfg.OUTPUT_DIR = os.path.join(oyster_cfg.folders['output'], '{:02d}'.format(cfg_id))
+    os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
     # Let training initialize from model zoo
     cfg.merge_from_file(model_zoo.get_config_file(oyster_cfg.config_file[cfg_id]))
     cfg.DATASETS.TRAIN = ("oyster_train",)
-    cfg.DATASETS.TEST = ("oyster_val",)
     cfg.DATALOADER.NUM_WORKERS = 2
-    cfg.OUTPUT_DIR = os.path.join(oyster_cfg.folders['output'], '{:02d}'.format(cfg_id))
-    os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
     cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url(oyster_cfg.config_file[cfg_id])
     cfg.SOLVER.IMS_PER_BATCH = 2
     cfg.SOLVER.BASE_LR = oyster_cfg.SOLVER_BASE_LR
@@ -57,21 +56,23 @@ def train(oyster_cfg, cfg_id=0):
     return trainer, cfg
 
 
-def predictor(oyster_cfg, cfg, cfg_id=0):
-    cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "model_final.pth")
-    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = oyster_cfg.thresh_percent * .01
-    return DefaultPredictor(cfg)
-
-
 def evaluate(cfg, trainer):
+    cfg.DATASETS.TEST = ("oyster_val",)
     evaluator = COCOEvaluator("oyster_val", cfg, False, output_dir=cfg.OUTPUT_DIR)
     val_loader = build_detection_test_loader(cfg, "oyster_val")
     results = inference_on_dataset(trainer.model, val_loader, evaluator)
     oyster_cfg.log(results)
 
 
-def infer(oyster_cfg, oyster_metadata):
-    dataset_dicts = labelmeDict(os.path.join(oyster_cfg.folders['data'], "val"))
+def infer(oyster_cfg, cfg, oyster_metadata, cfg_id=0):
+    cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, oyster_cfg.MODEL_WEIGHTS[0])
+    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = oyster_cfg.thresh_percent * .01
+    dataset_dicts = labelmeDict(oyster_cfg.folders['data'], "val")
+    predictor = DefaultPredictor(cfg)
+    pr_dir = os.path.join(cfg.OUTPUT_DIR, 'predictions')
+    gt_dir = os.path.join(cfg.OUTPUT_DIR, 'ground_truth')
+    os.makedirs(pr_dir, exist_ok=True)
+    os.makedirs(gt_dir, exist_ok=True)
     for d in dataset_dicts:
         im = cv2.imread(d["file_name"])
         # Prediction
@@ -83,14 +84,14 @@ def infer(oyster_cfg, oyster_metadata):
                        # instance_mode=ColorMode.IMAGE_BW   # remove the colors of unsegmented pixels
                        )
         v = v.draw_instance_predictions(outputs["instances"].to("cpu"))
-        cv2.imwrite(os.path.join(oyster_cfg.folders['save'], "{}_predicted.jpg".format(d["image_id"])),
+        print(os.path.join(pr_dir, d["image_id"]))
+        cv2.imwrite(os.path.join(prls_dir, d["image_id"]),
                     v.get_image()[:, :, ::-1])
         # Ground Truth
         img = cv2.imread(d["file_name"])
-        cv2.imwrite(os.path.join(oyster_cfg.folders['save'], "{}_no_mask.jpg".format(d["image_id"])), img)
         visualizer = Visualizer(img[:, :, ::-1], metadata=oyster_metadata, scale=0.8)
         vis = visualizer.draw_dataset_dict(d)
-        cv2.imwrite(os.path.join(oyster_cfg.folders['save'], "{}_ground_truth.jpg".format(d["image_id"])),
+        cv2.imwrite(os.path.join(gt_dir, d["image_id"]),
                     vis.get_image()[:, :, ::-1])
 
 
@@ -100,6 +101,10 @@ if __name__ == '__main__':
                         dest="cfg_id",
                         default=0,
                         help="detecron2 model id (in oyster config file)")
+    parser.add_argument("-p", required=False,
+                        dest="predict",
+                        default=True,
+                        help="whether or not predict the val images")
     args = parser.parse_args()
     cfg_id = int(args.cfg_id)
     oyster_cfg = Config(cfg_id)
@@ -109,6 +114,10 @@ if __name__ == '__main__':
     trainer, detectron_cfg = train(oyster_cfg, cfg_id)
     evaluate(detectron_cfg, trainer)
 
-    # predictor(oyster_cfg, detectron_cfg, args.cfg_id)
-    # infer(oyster_cfg, oyster_metadata)
+    if args.predict:
+        infer(oyster_cfg, detectron_cfg, oyster_metadata, cfg_id)
 
+""""" 
+TO DO:
+write a class for trainer
+"""
