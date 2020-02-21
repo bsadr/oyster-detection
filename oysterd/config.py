@@ -25,7 +25,7 @@ class Config:
     )
     SOLVER_IMS_PER_BATCH = 2
     SOLVER_BASE_LR = 0.00025
-    SOLVER_MAX_ITER = 300
+    SOLVER_MAX_ITER = 1000
     config_file = [
         "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml",
         "COCO-InstanceSegmentation/mask_rcnn_R_50_DC5_3x.yaml",
@@ -42,7 +42,7 @@ class Config:
     resume = False
     MODEL_WEIGHTS = ["model_final.pth"]
 
-    thresh_percent = 30
+    thresh_percent = 70
     input = InputType.labelme
 
     def __init__(self, cfg_id=0):

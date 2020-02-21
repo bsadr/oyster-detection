@@ -5,6 +5,10 @@ import numpy as np
 from os import listdir
 from os.path import isfile, join
 from detectron2.structures import BoxMode
+from detectron2.utils.visualizer import Visualizer
+from detectron2.utils.visualizer import ColorMode
+from detectron2.data import DatasetCatalog, MetadataCatalog
+
 import shutil
 
 # export to labelme format
@@ -163,6 +167,7 @@ def exp_makesense_labelme(data_dir, sub_dir):
         toLabelme(json_name, shapes, fname, height, width)
 
 
+# draw polygons
 def draw(dict):
     colors = [(128, 0, 0), (255, 0, 0), (25, 25, 112), (0, 0, 0)]
     # colors = [(128, 0, 0), (255, 0, 0), (255, 127, 80), (255, 215, 0),
@@ -201,3 +206,36 @@ def draw(dict):
         print(os.path.join(save_dir, bname))
         cv2.imwrite(os.path.join(save_dir, bname), im)
 
+
+# draw masks
+def draw_masks(dict, oyster_metadata):
+    for d in dict:
+        fname = d["file_name"]
+        [dname, bname] = os.path.split(fname)
+        if len(bname) > 8:
+            bname = bname.split('_')[1]
+            if bname[0] == '0':
+                bname = bname[1:]
+        fname = os.path.join(dname, bname)
+        im = cv2.imread(fname)
+
+        save_dir_im = os.path.join(dname, 'gt_masked_im')
+        save_dir_bl = os.path.join(dname, 'gt_masked_bl')
+        try:
+            os.makedirs(save_dir_im, exist_ok=True)
+            os.makedirs(save_dir_bl, exist_ok=True)
+        except OSError:
+            print("Error creating {}/{}".format(save_dir_im, save_dir_bl))
+
+        visualizer = Visualizer(im[:, :, ::-1], metadata=oyster_metadata, scale=.625)
+        visualizer._default_font_size *= 2.5
+        vis = visualizer.draw_dataset_dict(d)
+        cv2.imwrite(os.path.join(save_dir_im, bname),
+                    vis.get_image()[:, :, ::-1])
+
+        bl = np.zeros(shape=[d["height"], d["width"], 3], dtype=np.uint8)
+        visualizerbl = Visualizer(bl[:, :, ::-1], metadata=oyster_metadata, scale=.625)
+        visualizerbl._default_font_size *= 2.5
+        visbl = visualizerbl.draw_dataset_dict(d)
+        cv2.imwrite(os.path.join(save_dir_bl, bname),
+                    visbl.get_image()[:, :, ::-1])
