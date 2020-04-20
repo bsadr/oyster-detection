@@ -2,4 +2,6 @@
 env
 *.pyc
 output
+logs
+pids
 
