@@ -145,6 +145,7 @@ def infer(oyster_cfg, cfg, oyster_metadata, cfg_id=0, folder=None):
                         vis.get_image()[:, :, ::-1])
 
 
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", required=False,
