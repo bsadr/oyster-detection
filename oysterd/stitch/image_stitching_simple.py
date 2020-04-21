@@ -19,31 +19,36 @@ args = vars(ap.parse_args())
 # grab the paths to the input images and initialize our images list
 print("[INFO] loading images...")
 imagePaths = sorted(list(paths.list_images(args["images"])))
-images = []
+print('images count: {}'.format(len(images)))
+images = [[]]
+stitch_images = [[]]
 
-# loop over the image paths, load each one, and add them to our
-# images to stich list
-for imagePath in imagePaths:
+# loop over the image paths, load each one, and add them to our images to stitch list
+size_chunk = 3
+for i, imagePath in enumerate(imagePaths):
 	image = cv2.imread(imagePath)
-	images.append(image)
-
-# initialize OpenCV's image sticher object and then perform the image
-# stitching
-print("[INFO] stitching images...")
+	images[-1].append(image)
+	if i % size_chunk == size_chunk-1:
+		images.append([])
+# initialize OpenCV's image sticher object and then perform the image stitching
 stitcher = cv2.createStitcher() if imutils.is_cv3() else cv2.Stitcher_create()
-(status, stitched) = stitcher.stitch(images)
 
-# if the status is '0', then OpenCV successfully performed image
-# stitching
-if status == 0:
-	# write the output stitched image to disk
-	cv2.imwrite(args["output"], stitched)
+idx = 0
 
-	# display the output stitched image to our screen
-	# cv2.imshow("Stitched", stitched)
-	# cv2.waitKey(0)
-
-# otherwise the stitching failed, likely due to not enough keypoints)
-# being detected
-else:
-	print("[INFO] image stitching failed ({})".format(status))
+while len(images) > 0:
+	for i, chunk_images in enumerate(images):
+		print("[INFO] stitching images of chunk {} out of {}".format(i, len(images)))
+		(status, stitched) = stitcher.stitch(chunk_images)
+		# if the status is '0', then OpenCV successfully performed image stitching
+		if status == 0:
+			cv2.imwrite('{}/{}.jpg'.format(args["output"], idx), stitched)
+			idx += 1
+			stitch_images[-1].append(stitched)
+			if i % size_chunk == size_chunk-1:
+				stitch_images.append([])
+		else:
+			print("[INFO] image stitching failed ({})".format(status))
+		images = stitch_images[:]
+		stitch_images = [[]]
+cv2.imwrite('{}/final.jpg'.format(args["output"]), images[-1])
+print('images count: {} and {}'.format(len(images[-1]), len(images)))
