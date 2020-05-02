@@ -12,10 +12,7 @@ class InputType(Enum):
 
 class Config:
     folders = dict(
-        # data="/home/bsadrfa/behzad/projects/data_oyster/data/",
-        # data="/home/bsadrfa/behzad/projects/data_oyster/don_matt/",
         data="/home/bsadrfa/behzad/projects/data_oyster/db2/",  # training and evaluation data folder
-        # infer="/home/bsadrfa/behzad/projects/data_oyster/data/frames/IMG_10870/",
         infer="/home/bsadrfa/behzad/projects/data_oyster/data/frames/IMG_10869_fps_5/4",
         save="/home/bsadrfa/behzad/projects/data_oyster/output/predictions",
         ground_truth="/home/bsadrfa/behzad/projects/data_oyster/output/ground_truth", # to save not load
@@ -23,9 +20,15 @@ class Config:
         pred="/home/bsadrfa/behzad/projects/data_oyster/img_pred/",
         model="/home/bsadrfa/behzad/projects/data_oyster/model/",
         # output="/home/bsadrfa/behzad/projects/output_oyster/"
-        # output="output/"
         output="output/frames/",
         weights="/home/bsadrfa/behzad/projects/oyster/oyster-detection/output/00/"
+    )
+    video = dict(
+        path = "/home/bsadrfa/behzad/projects/data_oyster/data/video/IMG_10869.MP4",
+        fps = 30,
+        fs = 1,
+        fe = -1,
+        tmp = "/scratch1/bsadrfa/tmp/"
     )
     SOLVER_IMS_PER_BATCH = 2
     SOLVER_BASE_LR = 0.00025

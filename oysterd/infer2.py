@@ -10,9 +10,13 @@ from detectron2.config import get_cfg
 # Other packages
 import os
 import argparse
+from pathlib import Path
 # oyster detection
 from config import Config, InputType
 from train import register, infer
+import cv2
+from tqdm import tqdm
+
 
 
 def getModel(oyster_cfg, cfg_id=0):
@@ -36,6 +40,35 @@ def getModel(oyster_cfg, cfg_id=0):
     return cfg
 
 
+def parse_video(vdata):
+    fps, fs, fe = vdata['fps'], vdata['fs'], vdata['fe']
+    video = cv2.VideoCapture(vdata['path'])
+    if fps is -1:
+        fps = video.get(cv2.CAP_PROP_FPS)
+    else:
+        video.set(cv2.CAP_PROP_FPS, fps)
+    tmpPath = os.path.join(tmp, '{}_fsp_{}'.format(Path(vdata['path']).stem), fps)
+    os.makedirs(tmpPath, exist_ok=True)
+    frame_count = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
+    # duration = frame_count / fps
+    if fe < 0:
+        fe = frame_count
+    video.set(cv2.CV_CAP_PROP_POS_FRAMES, fs-1)
+    frame_number = fs-1
+    frames = []
+    pbar = tqdm(total=fe-fs, unit=" stitches")
+    while video.isOpened() and frame_number<fe-1:
+        pbar.set_description("Importing video, frame {}".format(frame_number))
+        ret, frame = video.read()
+        frames.append(frame)
+        # write to tmpPath
+        cv2.imwrite(os.path.join(tmpPath, str(frame_number), frame))
+        frame_number += 1
+        pbar.update()
+    pbar.close()
+    return frames
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", required=False,
@@ -46,6 +79,22 @@ if __name__ == '__main__':
                         dest="folder",
                         default=None,
                         help="input folder")
+    parser.add_argument("-v", required=False,
+                        dest="video",
+                        default=None,
+                        help="video path")
+    parser.add_argument("-fps", required=False,
+                        dest="video",
+                        default=-1,
+                        help="fps")
+    parser.add_argument("-fs", required=False,
+                        dest="fs",
+                        default=1,
+                        help="start frame")
+    parser.add_argument("-fe", required=False,
+                        dest="-1",
+                        default=None,
+                        help="end frame, -1 for the last")
     args = parser.parse_args()
     cfg_id = int(args.cfg_id)
     folder = args.folder
@@ -54,4 +103,14 @@ if __name__ == '__main__':
 
     oyster_metadata = register(oyster_cfg)
     detectron_cfg = getModel(oyster_cfg, cfg_id)
-    infer(oyster_cfg, detectron_cfg, oyster_metadata, cfg_id, folder)
+    if not args.video:
+        infer(oyster_cfg, detectron_cfg, oyster_metadata, cfg_id, folder)
+    else:
+        vdata = dict(
+            path = args.video,
+            fps = int(args.fps),
+            fs = int(args.fs),
+            fe = int(args.fe),
+            tmp = "/scratch1/bsadrfa/tmp/"
+        )
+        frames = parse_video(vdata)
