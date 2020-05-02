@@ -84,7 +84,7 @@ if __name__ == '__main__':
                         default=None,
                         help="video path")
     parser.add_argument("-fps", required=False,
-                        dest="video",
+                        dest="fps",
                         default=-1,
                         help="fps")
     parser.add_argument("-fs", required=False,
@@ -92,8 +92,8 @@ if __name__ == '__main__':
                         default=1,
                         help="start frame")
     parser.add_argument("-fe", required=False,
-                        dest="-1",
-                        default=None,
+                        dest="fe",
+                        default=-1,
                         help="end frame, -1 for the last")
     args = parser.parse_args()
     cfg_id = int(args.cfg_id)
