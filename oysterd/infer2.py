@@ -47,7 +47,7 @@ def parse_video(vdata):
         fps = video.get(cv2.CAP_PROP_FPS)
     else:
         video.set(cv2.CAP_PROP_FPS, fps)
-    tmpPath = os.path.join(tmp, '{}_fsp_{}'.format(Path(vdata['path']).stem), fps)
+    tmpPath = os.path.join(vdata['tmp'], '{}_fsp_{}'.format(Path(vdata['path']).stem), fps)
     os.makedirs(tmpPath, exist_ok=True)
     frame_count = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
     # duration = frame_count / fps
