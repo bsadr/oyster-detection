@@ -44,26 +44,31 @@ def parse_video(vdata):
     fps, fs, fe = vdata['fps'], vdata['fs'], vdata['fe']
     video = cv2.VideoCapture(vdata['path'])
     if fps is -1:
-        fps = video.get(cv2.CAP_PROP_FPS)
+        fps = int(video.get(cv2.CAP_PROP_FPS))
+        print('fps: {}'.format(fps))
     else:
         video.set(cv2.CAP_PROP_FPS, fps)
-    tmpPath = os.path.join(vdata['tmp'], '{}_fsp_{}'.format(Path(vdata['path']).stem), fps)
+        fps = int(video.get(cv2.CAP_PROP_FPS))
+        print('fps set to: {}'.format(fps))
+    tmpPath = os.path.join(vdata['tmp'], '{}_fps_{}'.format(Path(vdata['path']).stem, fps))
     os.makedirs(tmpPath, exist_ok=True)
+    print('tmpPath: {}'.format(tmpPath))
     frame_count = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
     # duration = frame_count / fps
     if fe < 0:
         fe = frame_count
-    video.set(cv2.CV_CAP_PROP_POS_FRAMES, fs-1)
+    video.set(cv2.CAP_PROP_POS_FRAMES, fs-1)
     frame_number = fs-1
     frames = []
     pbar = tqdm(total=fe-fs, unit=" stitches")
     while video.isOpened() and frame_number<fe-1:
         pbar.set_description("Importing video, frame {}".format(frame_number))
-        ret, frame = video.read()
-        frames.append(frame)
-        # write to tmpPath
-        cv2.imwrite(os.path.join(tmpPath, str(frame_number), frame))
-        frame_number += 1
+        success, frame = video.read()
+        if success :
+            frames.append(frame)
+            # write to tmpPath
+            cv2.imwrite(os.path.join(tmpPath, '{:04d}.jpg'.format(frame_number)), frame)
+            frame_number += 1
         pbar.update()
     pbar.close()
     return frames
