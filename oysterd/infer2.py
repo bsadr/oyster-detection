@@ -41,18 +41,14 @@ def getModel(oyster_cfg, cfg_id=0):
 
 
 def parse_video(vdata):
-    fps, fs, fe = vdata['fps'], vdata['fs'], vdata['fe']
+    set_fps, fs, fe = vdata['fps'], vdata['fs'], vdata['fe']
     video = cv2.VideoCapture(vdata['path'])
-    if fps is -1:
-        fps = int(video.get(cv2.CAP_PROP_FPS))
-        print('fps: {}'.format(fps))
-    else:
-        video.set(cv2.CAP_PROP_FPS, fps)
-        fps = int(video.get(cv2.CAP_PROP_FPS))
-        print('fps set to: {}'.format(fps))
-    tmpPath = os.path.join(vdata['tmp'], '{}_fps_{}'.format(Path(vdata['path']).stem, fps))
+    fps = int(video.get(cv2.CAP_PROP_FPS))
+    print('fps: {}'.format(fps))
+    set_fps = fps if set_fps < 0
+    tmpPath = os.path.join(vdata['tmp'], '{}_fps_{}'.format(Path(vdata['path']).stem, set_fps))
     os.makedirs(tmpPath, exist_ok=True)
-    print('tmpPath: {}'.format(tmpPath))
+    print('Video is exported to: {}'.format(tmpPath))
     frame_count = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
     # duration = frame_count / fps
     if fe < 0:
@@ -64,14 +60,14 @@ def parse_video(vdata):
     while video.isOpened() and frame_number<fe-1:
         pbar.set_description("Importing video, frame {}".format(frame_number))
         success, frame = video.read()
-        if success :
+        if success and frame_number % round(fps/set_fps) == 0:
             frames.append(frame)
             # write to tmpPath
             cv2.imwrite(os.path.join(tmpPath, '{:04d}.jpg'.format(frame_number)), frame)
-            frame_number += 1
+        frame_number += 1
         pbar.update()
     pbar.close()
-    return frames
+    return frames, tmpPath
 
 
 if __name__ == '__main__':
@@ -118,4 +114,5 @@ if __name__ == '__main__':
             fe = int(args.fe),
             tmp = "/scratch1/bsadrfa/tmp/"
         )
-        frames = parse_video(vdata)
+        frames, srcPath = parse_video(vdata)
+        infer(oyster_cfg, detectron_cfg, oyster_metadata, cfg_id, srcPath)

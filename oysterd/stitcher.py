@@ -19,7 +19,7 @@ def stitch(oyster_cfg, type, cfg_id=0):
     for img in imagePaths:
         im = cv2.imread(img)
         images.append(im)
-    stitcher = cv2.createStitcher() if imutils.is_cv3() else cv2.Stitcher_create()
+    stitcher = cv2.createStitcher(True) if imutils.is_cv3() else cv2.Stitcher_create(True)
     (status, stitched) = stitcher.stitch(images)
     if status == 0:
         des = ''.join([dirname(oyster_cfg.folders['infer']), '_', type, '.jpg'])
