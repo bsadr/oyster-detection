@@ -45,7 +45,7 @@ def parse_video(vdata):
     video = cv2.VideoCapture(vdata['path'])
     fps = int(video.get(cv2.CAP_PROP_FPS))
     print('fps: {}'.format(fps))
-    set_fps = fps if set_fps < 0
+    set_fps = fps if set_fps < 0 else set_fps
     tmpPath = os.path.join(vdata['tmp'], '{}_fps_{}'.format(Path(vdata['path']).stem, set_fps))
     os.makedirs(tmpPath, exist_ok=True)
     print('Video is exported to: {}'.format(tmpPath))

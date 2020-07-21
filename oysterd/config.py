@@ -50,7 +50,7 @@ class Config:
     resume = False
     MODEL_WEIGHTS = ["model_final.pth"]
 
-    thresh_percent = 70
+    thresh_percent = 60
     input = InputType.labelme
 
     def __init__(self, cfg_id=0):
