@@ -1,4 +1,5 @@
 import json
+import xml.etree.ElementTree as ET
 import cv2
 import os
 import numpy as np
@@ -115,6 +116,94 @@ def simpleDict(infer_dir):
     return dataset_dicts
 
 
+# voc to detectron2 dict
+def vocDict(data_dir, sub_dir):
+    xml_dir = os.path.join(data_dir, "ann/{}".format(sub_dir))
+    if not os.path.exists(xml_dir):
+        return False
+    xml_files = [os.path.join(xml_dir, f) for f in listdir(xml_dir)
+                  if isfile(join(xml_dir, f)) and f.lower().split('.')[-1] == 'xml']
+    dataset_dicts = []
+    for xml_file in xml_files:
+        tree = ET.parse(xml_file)
+        root = tree.getroot()
+        record = {}
+        fname = os.path.join(os.path.join(data_dir, "img/{}/".format(sub_dir)), root.findtext("filename"))
+        record["file_name"] = fname
+        record["image_id"] = root.findtext("filename")
+        record["height"] = int(tree.findall("./size/height")[0].text)
+        record["width"] = int(tree.findall("./size/width")[0].text)
+
+        instances = []
+        for obj in tree.findall("object"):
+            cls = obj.find("name").text
+            bbox = obj.find("bndbox")
+            bbox = [float(bbox.find(x).text) for x in ["xmin", "ymin", "xmax", "ymax"]]
+            bbox[0] -= -1.0
+            bbox[1] -= -1.0
+            instance = {
+                "bbox": bbox,
+                "bbox_mode": BoxMode.XYXY_ABS,
+                # "segmentation": [poly],
+                "category_id": 0,
+                "iscrowd": 0
+            }
+            instances.append(instance)
+        record["annotations"] = instances
+        dataset_dicts.append(record)
+    return dataset_dicts
+
+
+# from https://github.com/yukkyo/voc2coco
+def get_image_info(annotation_root, extract_num_from_imgid=True):
+    path = annotation_root.findtext('path')
+    if path is None:
+        filename = annotation_root.findtext('filename')
+    else:
+        filename = os.path.basename(path)
+    img_name = os.path.basename(filename)
+    img_id = os.path.splitext(img_name)[0]
+    if extract_num_from_imgid and isinstance(img_id, str):
+        img_id = int(re.findall(r'\d+', img_id)[0])
+
+    size = annotation_root.find('size')
+    width = int(size.findtext('width'))
+    height = int(size.findtext('height'))
+
+    image_info = {
+        'file_name': filename,
+        'height': height,
+        'width': width,
+        'id': img_id
+    }
+    return image_info
+
+
+# from https://github.com/yukkyo/voc2coco
+def get_coco_annotation_from_obj(obj, label2id):
+    label = obj.findtext('name')
+    assert label in label2id, "Error: {label} is not in label2id !"
+    category_id = label2id[label]
+    bndbox = obj.find('bndbox')
+    xmin = int(bndbox.findtext('xmin')) - 1
+    ymin = int(bndbox.findtext('ymin')) - 1
+    xmax = int(bndbox.findtext('xmax'))
+    ymax = int(bndbox.findtext('ymax'))
+    assert xmax > xmin and ymax > ymin, "Box size error !: (xmin, ymin, xmax, ymax): {xmin, ymin, xmax, ymax}"
+    o_width = xmax - xmin
+    o_height = ymax - ymin
+    ann = {
+        'area': o_width * o_height,
+        'iscrowd': 0,
+        'bbox': [xmin, ymin, o_width, o_height],
+        'category_id': category_id,
+        'ignore': 0,
+        'segmentation': []  # This script is not for segmentation
+    }
+    return ann
+
+
+
 # makesense to detectron2 dict
 def makesenseDict(data_dir, sub_dir):
     json_file = os.path.join(data_dir, "img/{}/via_region_data.json".format(sub_dir))
@@ -149,6 +238,7 @@ def makesenseDict(data_dir, sub_dir):
         record["annotations"] = objs
         dataset_dicts.append(record)
     return dataset_dicts
+
 
 
 # export makesense to labelme

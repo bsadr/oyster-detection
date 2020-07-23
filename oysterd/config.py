@@ -8,50 +8,52 @@ import json
 class InputType(Enum):
     labelme = 0
     makesense = 1
+    voc = 2
 
 
 class Config:
     folders = dict(
-        data="/home/bsadrfa/behzad/projects/data_oyster/db2/",  # training and evaluation data folder
-        # infer="/home/bsadrfa/behzad/projects/data_oyster/data/frames/IMG_10869_fps_5/4",
-        infer="/scratch1/bsadrfa/tmp/GH010869_fps_30",
-        save="/home/bsadrfa/behzad/projects/data_oyster/output/predictions",
-        ground_truth="/home/bsadrfa/behzad/projects/data_oyster/output/ground_truth", # to save not load
-        pred="/home/bsadrfa/behzad/projects/data_oyster/img_pred/",
-        model="/home/bsadrfa/behzad/projects/data_oyster/model/",
+        data="/home/bsadrfa/behzad/projects/distat/data/Circles_Dataset_makeML",  # training and evaluation data folder
+        infer="/home/bsadrfa/behzad/projects/distat/data/Circles_Dataset_makeML/img/test",
+        save="/home/bsadrfa/behzad/projects/distat/output/predictions",
+        ground_truth="/home/bsadrfa/behzad/projects/distat/output/ground_truth", # to save not load
+        # pred="/home/bsadrfa/behzad/projecs/data_oyster/img_pred/",
+        model="/home/bsadrfa/behzad/projects/distat/model/",
         # output="/home/bsadrfa/behzad/projects/output_oyster/"
-        output="/scratch1/bsadrfa/tmp/output/frames/",
+        output="/scratch1/bsadrfa/tmp/distat/output/frames/",
         # output="output/frames/",
-        weights="/home/bsadrfa/behzad/projects/oyster/oyster-detection/output/00/"
+        weights="/home/bsadrfa/behzad/projects/distat/output/00/"
     )
     video = dict(
-        path = "/scratch1/bsadrfa/video/GH010869.MP4",
+        # path = "/scratch1/bsadrfa/video/GH010869.MP4",
         fps = 30,
         fs = 1,
         fe = -1,
-        tmp = "/scratch1/bsadrfa/tmp/"
+        tmp = "/scratch1/bsadrfa/tmp/distat"
     )
     SOLVER_IMS_PER_BATCH = 2
     SOLVER_BASE_LR = 0.00025
     SOLVER_MAX_ITER =  1000
     config_file = [
-        "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml",
-        "COCO-InstanceSegmentation/mask_rcnn_R_50_DC5_3x.yaml",
-        "COCO-InstanceSegmentation/mask_rcnn_R_50_C4_3x.yaml",
-        "COCO-InstanceSegmentation/mask_rcnn_R_101_FPN_3x.yaml",
-        "COCO-InstanceSegmentation/mask_rcnn_R_101_DC5_3x.yaml",
-        "COCO-InstanceSegmentation/mask_rcnn_R_101_C4_3x.yaml",
-        "COCO-Detection/retinanet_R_50_FPN_3x.yaml",
-        "COCO-Detection/retinanet_R_101_FPN_3x.yaml",
-        "COCO-Detection/rpn_R_50_FPN_1x.yaml",
-        "COCO-Detection/rpn_R_50_C4_1x.yaml",
-        "COCO-Detection/fast_rcnn_R_50_FPN_1x.yaml"
+        "COCO-Detection/faster_rcnn_R_50_C4_1x.yaml",
+#        "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml",
+#        "COCO-InstanceSegmentation/mask_rcnn_R_50_DC5_3x.yaml",
+#        "COCO-InstanceSegmentation/mask_rcnn_R_50_C4_3x.yaml",
+#        "COCO-InstanceSegmentation/mask_rcnn_R_101_FPN_3x.yaml",
+#        "COCO-InstanceSegmentation/mask_rcnn_R_101_DC5_3x.yaml",
+#        "COCO-InstanceSegmentation/mask_rcnn_R_101_C4_3x.yaml",
+#        "COCO-Detection/retinanet_R_50_FPN_3x.yaml",
+#        "COCO-Detection/retinanet_R_101_FPN_3x.yaml",
+#        "COCO-Detection/rpn_R_50_FPN_1x.yaml",
+#        "COCO-Detection/rpn_R_50_C4_1x.yaml",
+#        "COCO-Detection/fast_rcnn_R_50_FPN_1x.yaml"
     ]
     resume = False
     MODEL_WEIGHTS = ["model_final.pth"]
 
     thresh_percent = 60
-    input = InputType.labelme
+#    input = InputType.labelme
+    input = InputType.voc
 
     def __init__(self, cfg_id=0):
         self.cfg_id = cfg_id

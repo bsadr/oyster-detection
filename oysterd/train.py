@@ -20,7 +20,7 @@ import cv2
 import argparse
 import numpy as np
 # oyster detection
-from annotations import labelmeDict, makesenseDict, simpleDict
+from annotations import labelmeDict, makesenseDict, simpleDict, vocDict
 from config import Config, InputType
 
 
@@ -29,9 +29,12 @@ def register(oyster_cfg):
         if oyster_cfg.input == InputType.labelme:
             DatasetCatalog.register("oyster_" + d,
                                     lambda d=d: labelmeDict(oyster_cfg.folders['data'], d))
-        else:
+        elif oyster_cfg.input == InputType.makesense:
             DatasetCatalog.register("oyster_" + d,
                                     lambda d=d: makesenseDict(oyster_cfg.folders['data'], d))
+        elif oyster_cfg.input == InputType.voc:
+            DatasetCatalog.register("oyster_" + d,
+                                    lambda d=d: vocDict(oyster_cfg.folders['data'], d))
         MetadataCatalog.get("oyster_" + d).set(thing_classes=["oyster"])
     return MetadataCatalog.get("oyster_train")
 
