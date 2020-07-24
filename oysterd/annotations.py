@@ -119,6 +119,8 @@ def simpleDict(infer_dir):
 # voc to detectron2 dict
 def vocDict(data_dir, sub_dir):
     xml_dir = os.path.join(data_dir, "ann/{}".format(sub_dir))
+    print(xml_dir)
+    print("-----------------------------------")
     if not os.path.exists(xml_dir):
         return False
     xml_files = [os.path.join(xml_dir, f) for f in listdir(xml_dir)
@@ -129,6 +131,10 @@ def vocDict(data_dir, sub_dir):
         root = tree.getroot()
         record = {}
         fname = os.path.join(os.path.join(data_dir, "img/{}/".format(sub_dir)), root.findtext("filename"))
+        if not os.path.exists(fname):
+            print('Warning: image is not exists at ' + fname)
+            print('Warning: check ' + xml_file)
+            continue
         record["file_name"] = fname
         record["image_id"] = root.findtext("filename")
         record["height"] = int(tree.findall("./size/height")[0].text)
@@ -151,6 +157,8 @@ def vocDict(data_dir, sub_dir):
             instances.append(instance)
         record["annotations"] = instances
         dataset_dicts.append(record)
+
+        print(record["image_id"])
     return dataset_dicts
 
 

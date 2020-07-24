@@ -13,16 +13,28 @@ class InputType(Enum):
 
 class Config:
     folders = dict(
-        data="/home/bsadrfa/behzad/projects/distat/data/Circles_Dataset_makeML",  # training and evaluation data folder
-        infer="/home/bsadrfa/behzad/projects/distat/data/Circles_Dataset_makeML/img/test",
-        save="/home/bsadrfa/behzad/projects/distat/output/predictions",
-        ground_truth="/home/bsadrfa/behzad/projects/distat/output/ground_truth", # to save not load
+# Circles_Dataset_makeML
+#        data="/home/bsadrfa/behzad/projects/distat/data/Circles_Dataset_makeML",  # training and evaluation data folder
+# Freenuts
+#        data="/home/bsadrfa/behzad/projects/distat/data/Freenuts",  # training and evaluation data folder
+#        infer="/home/bsadrfa/behzad/projects/distat/data/Freenuts/img/test2",
+# shortScrews
+#        data="/home/bsadrfa/behzad/projects/distat/data/shortScrews",  # training and evaluation data folder
+#        infer="/home/bsadrfa/behzad/projects/distat/data/shortScrews/img/test5",
+# Longscrews
+        data="/home/bsadrfa/behzad/projects/distat/data/Longscrews",  # training and evaluation data folder
+        infer="/home/bsadrfa/behzad/projects/distat/data/Longscrews/img/test",
+
+        # infer="/home/bsadrfa/behzad/projects/distat/data/Circles_Dataset_makeML/img/val",
+        # save="/home/bsadrfa/behzad/projects/distat/output/predictions",
+        # ground_truth="/home/bsadrfa/behzad/projects/distat/output/ground_truth", # to save not load
         # pred="/home/bsadrfa/behzad/projecs/data_oyster/img_pred/",
         model="/home/bsadrfa/behzad/projects/distat/model/",
         # output="/home/bsadrfa/behzad/projects/output_oyster/"
         output="/scratch1/bsadrfa/tmp/distat/output/frames/",
         # output="output/frames/",
-        weights="/home/bsadrfa/behzad/projects/distat/output/00/"
+        # weights="/home/bsadrfa/behzad/projects/distat/output/00/"
+        weights="/scratch1/bsadrfa/tmp/distat/output/frames/00"
     )
     video = dict(
         # path = "/scratch1/bsadrfa/video/GH010869.MP4",
@@ -35,7 +47,7 @@ class Config:
     SOLVER_BASE_LR = 0.00025
     SOLVER_MAX_ITER =  1000
     config_file = [
-        "COCO-Detection/faster_rcnn_R_50_C4_1x.yaml",
+        "COCO-Detection/faster_rcnn_R_50_FPN_3x.yaml",
 #        "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml",
 #        "COCO-InstanceSegmentation/mask_rcnn_R_50_DC5_3x.yaml",
 #        "COCO-InstanceSegmentation/mask_rcnn_R_50_C4_3x.yaml",

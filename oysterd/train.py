@@ -35,7 +35,8 @@ def register(oyster_cfg):
         elif oyster_cfg.input == InputType.voc:
             DatasetCatalog.register("oyster_" + d,
                                     lambda d=d: vocDict(oyster_cfg.folders['data'], d))
-        MetadataCatalog.get("oyster_" + d).set(thing_classes=["oyster"])
+        MetadataCatalog.get("oyster_" + d).set(thing_classes=["screw"])
+        MetadataCatalog.get("oyster_" + d).set(thing_colors=[[0, 255, 0]])
     return MetadataCatalog.get("oyster_train")
 
 
@@ -46,6 +47,7 @@ def train(oyster_cfg, cfg_id=0):
     # Let training initialize from model zoo
     cfg.merge_from_file(model_zoo.get_config_file(oyster_cfg.config_file[cfg_id]))
     cfg.DATASETS.TRAIN = ("oyster_train",)
+    cfg.DATASETS.TEST = ()
     cfg.DATALOADER.NUM_WORKERS = 2
     cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url(oyster_cfg.config_file[cfg_id])
     cfg.SOLVER.IMS_PER_BATCH = 2
@@ -72,6 +74,12 @@ def infer(oyster_cfg, cfg, oyster_metadata, cfg_id=0, folder=None):
     # cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, oyster_cfg.MODEL_WEIGHTS[0])
     cfg.MODEL.WEIGHTS = os.path.join(oyster_cfg.folders['weights'], oyster_cfg.MODEL_WEIGHTS[0])
     cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = oyster_cfg.thresh_percent * .01
+    
+    cfg.MODEL.RPN.NMS_THRESH = 0.7
+#    cfg.TEST.DETECTION_PER_IMAGE = 40
+#    cfg.MODEL.RPN.PRE_NMS_TOPK_TEST = 9000
+#    cfg.MODEL.RPN.POST_NMS_TOPK_TEST = 1500
+
     predictor = DefaultPredictor(cfg)
     if folder is not None:
         print('folder infer: {}'.format(folder))
@@ -100,24 +108,47 @@ def infer(oyster_cfg, cfg, oyster_metadata, cfg_id=0, folder=None):
             v = v.draw_instance_predictions(outputs["instances"].to("cpu"))
             cv2.imwrite(os.path.join(pr_dir, 'in_' + d["image_id"]),
                         v.get_image()[:, :, ::-1])      
-    elif oyster_cfg.folders['infer']:
+    elif 'infer' in oyster_cfg.folders:
         dataset_dicts = simpleDict(oyster_cfg.folders['infer'])
-        pr_dir = os.path.join(cfg.OUTPUT_DIR, 'infer')
+        pr_dir = os.path.join(cfg.OUTPUT_DIR, 'test')
         os.makedirs(pr_dir, exist_ok=True)
+#        for d in dataset_dicts:
+#            im = cv2.imread(d["file_name"])
+#            bk = np.zeros(shape=[d["height"], d["width"], 3], dtype=np.uint8)
+#            # Prediction
+#            outputs = predictor(im)
+#            predictions = outputs["instances"].to("cpu")
+#            # masks = np.asarray(predictions.pred_masks)
+#            # masks = [GenericMask(x, d["height"], d["width"]) for x in masks]            
+#            mask = (predictions.pred_masks.any(dim=0) > 0).numpy()
+#            bk[mask] = im[mask]
+#            print(os.path.join(pr_dir, d["image_id"]))
+#            cv2.imwrite(os.path.join(pr_dir, d["image_id"]), bk)
         for d in dataset_dicts:
             im = cv2.imread(d["file_name"])
             bk = np.zeros(shape=[d["height"], d["width"], 3], dtype=np.uint8)
             # Prediction
             outputs = predictor(im)
-            predictions = outputs["instances"].to("cpu")
-            # masks = np.asarray(predictions.pred_masks)
-            # masks = [GenericMask(x, d["height"], d["width"]) for x in masks]            
-            mask = (predictions.pred_masks.any(dim=0) > 0).numpy()
-            bk[mask] = im[mask]
+
+            num_instances = len(outputs["instances"].to("cpu"))
+            print('{}'.format(num_instances))
+            vscale = .2
+            fontscale = int(1/vscale) if vscale<1 else 1
+            im = cv2.putText(im, '{}'.format(num_instances), (int(d["width"]*.4), int(d["height"]*.96)), 
+                        cv2.FONT_HERSHEY_SIMPLEX, fontscale, (125, 255, 0), 2*fontscale, cv2.LINE_AA)
+            v = Visualizer(im[:, :, ::-1],
+                        metadata=oyster_metadata,
+                        scale=vscale,
+                        instance_mode=ColorMode.SEGMENTATION
+                        )
+            v._default_font_size *= 0.9
+            v = v.draw_instance_predictions(outputs["instances"].to("cpu"))
             print(os.path.join(pr_dir, d["image_id"]))
-            cv2.imwrite(os.path.join(pr_dir, d["image_id"]), bk)
+            cv2.imwrite(os.path.join(pr_dir, d["image_id"]),
+                        v.get_image()[:, :, ::-1])
     else:
-        dataset_dicts = labelmeDict(oyster_cfg.folders['data'], "val")       
+#        dataset_dicts = labelmeDict(oyster_cfg.folders['data'], "val")       
+        dataset_dicts = vocDict(oyster_cfg.folders['data'], "val")       
         pr_dir = os.path.join(cfg.OUTPUT_DIR, 'predictions')
         gt_dir = os.path.join(cfg.OUTPUT_DIR, 'ground_truth')
         os.makedirs(pr_dir, exist_ok=True)
@@ -128,21 +159,34 @@ def infer(oyster_cfg, cfg, oyster_metadata, cfg_id=0, folder=None):
             bk = np.zeros(shape=[d["height"], d["width"], 3], dtype=np.uint8)
             # Prediction
             outputs = predictor(im)
-            v = Visualizer(bk[:, :, ::-1],
+
+            num_instances = len(outputs["instances"].to("cpu"))
+            num_instances_gt = len(d["annotations"])
+            print('{} of {}'.format(num_instances, num_instances_gt))
+            vscale = 2
+            fontscale = int(1/vscale) if vscale<1 else 1
+            im = cv2.putText(im, '{} of {}'.format(num_instances, num_instances_gt), (int(d["width"]*.4), int(d["height"]*.96)), 
+                        cv2.FONT_HERSHEY_SIMPLEX, fontscale, (125, 255, 0), 2*fontscale, cv2.LINE_AA)
+
+#            v = Visualizer(bk[:, :, ::-1],
+            v = Visualizer(im[:, :, ::-1],
                         metadata=oyster_metadata,
-                        scale=0.625,
-                        instance_mode=ColorMode.IMAGE
+#                        scale=0.625,
+                        scale=vscale,
+                        instance_mode=ColorMode.SEGMENTATION
+#                        instance_mode=ColorMode.IMAGE # random colors
                         # instance_mode=ColorMode.IMAGE_BW   # remove the colors of unsegmented pixels
                         )
-            v._default_font_size *= 2.5
+#            v._default_font_size *= 2.5
+            v._default_font_size *= 0.9
             v = v.draw_instance_predictions(outputs["instances"].to("cpu"))
             print(os.path.join(pr_dir, d["image_id"]))
             cv2.imwrite(os.path.join(pr_dir, d["image_id"]),
                         v.get_image()[:, :, ::-1])
             # Ground Truth
             img = cv2.imread(d["file_name"])
-            visualizer = Visualizer(img[:, :, ::-1], metadata=oyster_metadata, scale=.625)
-            visualizer._default_font_size *= 2.5
+            visualizer = Visualizer(img[:, :, ::-1], metadata=oyster_metadata, scale=vscale)
+            visualizer._default_font_size *= 0.9
             vis = visualizer.draw_dataset_dict(d)
             cv2.imwrite(os.path.join(gt_dir, d["image_id"]),
                         vis.get_image()[:, :, ::-1])
