@@ -33,6 +33,7 @@ def register(oyster_cfg):
             DatasetCatalog.register("oyster_" + d,
                                     lambda d=d: makesenseDict(oyster_cfg.folders['data'], d))
         MetadataCatalog.get("oyster_" + d).set(thing_classes=["oyster"])
+        MetadataCatalog.get("oyster_" + d).set(thing_colors=[[0, 255, 0]])
     return MetadataCatalog.get("oyster_train")
 
 
@@ -69,12 +70,22 @@ def infer(oyster_cfg, cfg, oyster_metadata, cfg_id=0, folder=None):
     # cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, oyster_cfg.MODEL_WEIGHTS[0])
     cfg.MODEL.WEIGHTS = os.path.join(oyster_cfg.folders['weights'], oyster_cfg.MODEL_WEIGHTS[0])
     cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = oyster_cfg.thresh_percent * .01
+
+    cfg.MODEL.RPN.NMS_THRESH = 0.7
+#    cfg.TEST.DETECTION_PER_IMAGE = 40
+#    cfg.MODEL.RPN.PRE_NMS_TOPK_TEST = 9000
+#    cfg.MODEL.RPN.POST_NMS_TOPK_TEST = 1500
+    
     predictor = DefaultPredictor(cfg)
     if folder is not None:
         print('folder infer: {}'.format(folder))
         dataset_dicts = simpleDict(folder)
         pr_dir = os.path.join(cfg.OUTPUT_DIR, folder)
         os.makedirs(pr_dir, exist_ok=True)
+        bk_dir = os.path.join(pr_dir, 'mask')
+        os.makedirs(bk_dir, exist_ok=True)
+        in_dir = os.path.join(pr_dir, 'infer')
+        os.makedirs(bk_dir, exist_ok=True)
         for d in dataset_dicts:
             im = cv2.imread(d["file_name"])
             bk = np.zeros(shape=[d["height"], d["width"], 3], dtype=np.uint8)
@@ -86,7 +97,7 @@ def infer(oyster_cfg, cfg, oyster_metadata, cfg_id=0, folder=None):
             mask = (predictions.pred_masks.any(dim=0) > 0).numpy()
             bk[mask] = im[mask]
             print(os.path.join(pr_dir, d["image_id"]))
-            cv2.imwrite(os.path.join(pr_dir, 'bk_' + d["image_id"]), bk)
+            cv2.imwrite(os.path.join(bk_dir, 'bk_' + d["image_id"]), bk)
             v = Visualizer(im[:, :, ::-1],
                         metadata=oyster_metadata,
                         scale=0.625,
@@ -95,7 +106,7 @@ def infer(oyster_cfg, cfg, oyster_metadata, cfg_id=0, folder=None):
                         )
             v._default_font_size *= 2.5
             v = v.draw_instance_predictions(outputs["instances"].to("cpu"))
-            cv2.imwrite(os.path.join(pr_dir, 'in_' + d["image_id"]),
+            cv2.imwrite(os.path.join(in_dir, 'in_' + d["image_id"]),
                         v.get_image()[:, :, ::-1])      
     elif oyster_cfg.folders['infer']:
         dataset_dicts = simpleDict(oyster_cfg.folders['infer'])
