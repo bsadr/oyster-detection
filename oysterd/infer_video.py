@@ -70,6 +70,7 @@ def parse_video(vdata):
     return frames, tmpPath
 
 
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", required=False,
