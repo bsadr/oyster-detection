@@ -25,7 +25,7 @@ from config import Config, InputType
 class Thing:
     def __init__(self, model_id=0):
         self.name = "oyster"
-        self.classes = ["live", "dead"]
+        self.classes = ["oyster", "dead"]
         self.colors = [[0, 255, 0], [0, 0, 255]]
 
         self.model_id = model_id

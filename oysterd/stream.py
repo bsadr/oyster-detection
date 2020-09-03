@@ -69,10 +69,18 @@ class Stream:
         v = Visualizer(frame[:, :, ::-1],
                     metadata=self.thing.metadata,
                     scale=1,
-                    instance_mode=ColorMode.IMAGE
+                    instance_mode=ColorMode.SEGMENTATION
                     )
         v._default_font_size *= 1.0
-        v = v.draw_instance_predictions(outputs["instances"].to("cpu"))
+        # v = v.draw_instance_predictions(outputs["instances"].to("cpu"))
+        v_boxes = predictions.pred_boxes if predictions.has("pred_boxes") else None
+        v = v.overlay_instances(
+            masks=None,
+            boxes=v_boxes,
+            labels=None,
+            keypoints=None,
+            assigned_colors=[(0,0.01,1) for i in range(len(v_boxes))],
+            alpha=0.8)
         self.detected_frame = v.get_image()[:, :, ::-1]
         # cv2.imwrite(os.path.join(in_dir, 'in_' + d["image_id"]),
         #             v.get_image()[:, :, ::-1])      
@@ -168,13 +176,13 @@ class Stream:
         height, width, _ =  self.stacked_frame.shape
         # fourcc = cv2.VideoWriter_fourcc(*'XVID')
         fourcc = cv2.VideoWriter_fourcc(*'MJPG')
-        video = cv2.VideoWriter(os.path.join(tmpPath, Path(vdata['path']).stem+'_count.avi'), fourcc, int(set_fps), (width,height))
+        # video = cv2.VideoWriter(os.path.join(tmpPath, Path(vdata['path']).stem+'_count.avi'), fourcc, int(set_fps), (width,height))
+        video = cv2.VideoWriter(os.path.join(tmpPath, Path(vdata['path']).stem+'_count.avi'), fourcc, 5, (width,height))
         stacked_files = [join(tmpPath, f) for f in listdir(tmpPath)
                     if isfile(join(tmpPath, f)) and f.lower().split('.')[-1] in image_types]
         stacked_files.sort()
         pbar = tqdm(total=len(stacked_files), unit=" frames")
         for f in stacked_files:
-            print(f)
             video.write(cv2.imread(f))
             pbar.update()
         video.release()
