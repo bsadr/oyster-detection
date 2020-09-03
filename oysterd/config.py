@@ -14,22 +14,25 @@ class Config:
     folders = dict(
         data="/home/bsadrfa/behzad/projects/data_oyster/db2/",  # training and evaluation data folder
         # infer="/home/bsadrfa/behzad/projects/data_oyster/data/frames/IMG_10869_fps_5/4",
-        infer="/scratch1/bsadrfa/tmp/GH010869_fps_30",
+        # infer="/scratch2/bsadrfa/tmp/GH010869_fps_30",
+        infer="/home/bsadrfa/behzad/projects/oyster/video/video_20870",
         save="/home/bsadrfa/behzad/projects/data_oyster/output/predictions",
         ground_truth="/home/bsadrfa/behzad/projects/data_oyster/output/ground_truth", # to save not load
         pred="/home/bsadrfa/behzad/projects/data_oyster/img_pred/",
         model="/home/bsadrfa/behzad/projects/data_oyster/model/",
         # output="/home/bsadrfa/behzad/projects/output_oyster/"
-        output="/scratch1/bsadrfa/tmp/output/frames/",
+        output="/home/bsadrfa/behzad/projects/oyster/output/frames/",
+        # output="/scratch2/bsadrfa/tmp/output/frames/",
         # output="output/frames/",
         weights="/home/bsadrfa/behzad/projects/oyster/oyster-detection/output/00/"
     )
     video = dict(
-        path = "/scratch1/bsadrfa/video/GH010869.MP4",
-        fps = 30,
-        fs = 1,
-        fe = -1,
-        tmp = "/scratch1/bsadrfa/tmp/"
+        path = "/home/bsadrfa/behzad/projects/data_oyster/video/GH020870.MP4",
+        fps = -1,
+        fs = 2400,
+        fe = 2600,
+        tmp = "/scratch2/bsadrfa/oyster/tmp2/"
+
     )
     SOLVER_IMS_PER_BATCH = 2
     SOLVER_BASE_LR = 0.00025

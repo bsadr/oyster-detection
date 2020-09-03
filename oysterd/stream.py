@@ -7,6 +7,8 @@ from detectron2.utils.visualizer import ColorMode
 from detectron2.structures import Boxes, BoxMode, pairwise_iou
 import torch
 import numpy as np
+from os import listdir
+from os.path import isfile, join
 
 # initialize a dictionary that maps strings to their corresponding
 # OpenCV object tracker implementations
@@ -25,7 +27,7 @@ class Stream:
         self.thing = thing
         self.count = 0
         self.cfg_thing = thing.cfg_thing
-        self.cfg_thing.setModel()
+        self.thing.setModel()
         if not vdata:
             self.vdata = self.cfg_thing.vdata
         else:
@@ -52,18 +54,16 @@ class Stream:
         # self.trackers = cv2.MultiTracker_create()
         pass
 
-    def detectFrame(self, frame=None):
+    def detectFrame(self):
         # oyster_metadata = self.thing.MetadataCatalog.get(self.thing.name + "_train")
         # predictor = self.thing.predictor        
         # Prediction
-        if not frame:
-            frame = self.frame
-        else:
-            self.frame = frame
+        frame = self.frame
+
         outputs = self.thing.predictor(frame)
         predictions = outputs["instances"].to("cpu")
         # masks = (predictions.pred_masks.any(dim=0) > 0).numpy()
-        boxes = (predictions.pred_boxes.any(dim=0) > 0).numpy()
+        boxes = predictions.pred_boxes.tensor.numpy() if predictions.has("pred_boxes") else None
         self.detected_boxes = boxes
        
         v = Visualizer(frame[:, :, ::-1],
@@ -79,11 +79,8 @@ class Stream:
         # return detected_frame, boxes, masks
 
 
-    def trackFrame(self, frame=None):
-        if not frame:
-            frame = self.frame
-        else:
-            self.frame = frame
+    def trackFrame(self):
+        frame = self.frame
 
         self.tracked_boxes = []
         self.tracked_succes = []
@@ -99,7 +96,7 @@ class Stream:
 
     def initTrackers(self):
         for box in self.detected_boxes:
-            self.trackers.append(OPENCV_OBJECT_TRACKERS[self.tracker_type])
+            self.trackers.append(OPENCV_OBJECT_TRACKERS[self.tracker_type]())
             self.trackers[-1].init(self.frame, 
                 (box[0], box[1], box[2]-box[0], box[3]-box[1])) # x, y, w, h
             self.count += 1
@@ -118,7 +115,7 @@ class Stream:
         tmp_files = [f for f in listdir(tmpPath)
                     if isfile(join(tmpPath, f)) and f.lower().split('.')[-1] in image_types]
         for f in tmp_files:
-            os.remove(f)
+            os.remove(join(tmpPath, f))
         print('Video is being exported to: {}'.format(tmpPath))
         frame_count = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
         # duration = frame_count / fps
@@ -130,23 +127,28 @@ class Stream:
         self.thing.setModel()
         self.createTrackers()
         pbar = tqdm(total=fe-fs, unit=" frames")
-        success, frame = video.read()
-        if success:
-            self.detectFrame(frame)
-            self.initTrackers()
-        
-        while video.isOpened() and frame_number<fe-1:
+        # success, frame = video.read()
+        # if success:
+        #    self.frame = frame
+        #    self.detectFrame()
+        #    self.initTrackers()
+        is_init = False
+        while video.isOpened() and frame_number<fe:
             pbar.set_description("Iterating video, frame {}".format(frame_number))
             success, frame = video.read()
             if success and frame_number % round(fps/set_fps) == 0:
                 # store original frame
                 # frames.append(frame)
                 # cv2.imwrite(os.path.join(tmpPath, '{:04d}.jpg'.format(frame_number)), frame)
-                
+                self.frame = frame
+
                 # detect things
-                self.detectFrame(frame)
+                self.detectFrame()
 
                 # track things
+                if not is_init:
+                    self.initTrackers()
+                    is_init = True
                 self.trackFrame()
 
                 # update trackers (remove undetected trackers)
@@ -164,11 +166,15 @@ class Stream:
 
         # save outout video
         height, width, _ =  self.stacked_frame.shape
-        video = cv2.VideoWriter(os.path.join(tmpPath, Path(vdata['path']).stem+'_count.avi'),-1,int(set_fps),(width,height))
-        stacked_files = [f for f in listdir(tmpPath)
+        # fourcc = cv2.VideoWriter_fourcc(*'XVID')
+        fourcc = cv2.VideoWriter_fourcc(*'MJPG')
+        video = cv2.VideoWriter(os.path.join(tmpPath, Path(vdata['path']).stem+'_count.avi'), fourcc, int(set_fps), (width,height))
+        stacked_files = [join(tmpPath, f) for f in listdir(tmpPath)
                     if isfile(join(tmpPath, f)) and f.lower().split('.')[-1] in image_types]
+        stacked_files.sort()
         pbar = tqdm(total=len(stacked_files), unit=" frames")
         for f in stacked_files:
+            print(f)
             video.write(cv2.imread(f))
             pbar.update()
         video.release()
@@ -233,7 +239,7 @@ class Stream:
         # add trackers for the new detected boxes
         for i in new_detected_indcies:
             box = self.detected_boxes[i]
-            self.trackers.append(OPENCV_OBJECT_TRACKERS[self.tracker_type])
+            self.trackers.append(OPENCV_OBJECT_TRACKERS[self.tracker_type]())
             self.trackers[-1].init(self.frame, 
                 (box[0], box[1], box[2]-box[0], box[3]-box[1])) # x, y, w, h
             self.count += 1
@@ -243,15 +249,16 @@ class Stream:
             del self.trackers[i]
 
         # draw the updated frame
-        self.updated_frame = frame
+        self.updated_frame = self.frame
         for box in self.tracked_boxes:
             (x, y, w, h) = [int(v) for v in box]
             cv2.rectangle(self.tracked_frame, (x, y), (x + w, y + h), self.tracker_color, 2)
 
         self.box_pairs = pairs
 
-    def stackFrames(self, zoom_factor=0.5):
-        dim = (int(frame.shape[1] * size_factor), int(frame.shape[0] * size_factor))
+    def stackFrames(self, zoom_factor=0.25):
+        pad = 30
+        dim = (int(self.frame.shape[1] * zoom_factor), int(self.frame.shape[0] * zoom_factor))
         # frames
         frames = (
             cv2.resize(self.frame, dim, interpolation = cv2.INTER_AREA), 
@@ -259,21 +266,18 @@ class Stream:
             cv2.resize(self.tracked_frame, dim, interpolation = cv2.INTER_AREA),
             cv2.resize(self.updated_frame, dim, interpolation = cv2.INTER_AREA))
         # labels
-        labels = [np.ones(int(shape=[20, dim[0], 3], dtype=np.uint8) for i in range(len(frames))]
+        labels = [np.ones(shape=[pad, int(dim[0]), 3], dtype=np.uint8) for i in range(len(frames))]
         # texts
         texts = (
             "Oysters: {}".format(self.count), "Detected", "Tracked", "Detected + Tracked"
         )
         # put text on labels
-        org = (15,15)
-        labels = [cv2.putText(l, texts[i], org, cv2.FONT_HERSHEY_SIMPLEX, 1, (125, 255, 0), 1, cv2.LINE_AA) for i, l in enumearte(labels)]
+        org = (int(0.7*pad), int(0.7*pad))
+        labels = [cv2.putText(l, texts[i], org, cv2.FONT_HERSHEY_SIMPLEX, .7, (125, 255, 0), 1, cv2.LINE_AA) for i, l in enumerate(labels)]
+        # vertical splitter pad
+        splitter = np.ones(shape=[int(dim[1]+pad)*2, pad, 3], dtype=np.uint8)
         # stack labels and frames
         frames = [np.concatenate((f, l), axis=0) for (f,l) in zip(frames, labels)]
         self.stacked_frame = np.concatenate((
-            np.concatenate((frames[0], frames[1), axis=1),
-            np.concatenate((frames[2], frames[3), axis=1)), axis=0)
-
-
-
-
-
+            np.concatenate((frames[0], frames[1]), axis=0), splitter, 
+            np.concatenate((frames[2], frames[3]), axis=0)), axis=1)

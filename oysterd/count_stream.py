@@ -32,11 +32,11 @@ args = parser.parse_args()
 model_id = int(args.model_id)
 thing = Thing(model_id)
 vdata = dict (
-    path = args.path if args.path else thing.cfg_thing.vdata["path"],
-    fps = int(args.fps) if args.fps else thing.cfg_thing.vdata["fps"],
-    fs = int(args.fs) if args.fs else thing.cfg_thing.vdata["fs"],
-    fe = int(args.fe) if args.fe else thing.cfg_thing.vdata["fe"],
-    tmp = args.tmp if args.tmp else thing.cfg_thing.vdata["tmp"]
+    path = args.path if args.path else thing.cfg_thing.video["path"],
+    fps = int(args.fps) if args.fps else thing.cfg_thing.video["fps"],
+    fs = int(args.fs) if args.fs else thing.cfg_thing.video["fs"],
+    fe = int(args.fe) if args.fe else thing.cfg_thing.video["fe"],
+    tmp = args.tmp if args.tmp else thing.cfg_thing.video["tmp"]
 )
 stream = Stream(thing, vdata)
 stream.countVideo()
