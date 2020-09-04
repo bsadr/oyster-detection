@@ -9,6 +9,8 @@ import torch
 import numpy as np
 from os import listdir
 from os.path import isfile, join
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 
 # initialize a dictionary that maps strings to their corresponding
 # OpenCV object tracker implementations
@@ -36,6 +38,8 @@ class Stream:
         self.trackers = []
         self.tracker_color = [255, 0, 0]
         self.frame = None
+        self.prv_frame = None
+        self.flow_frame = None
         self.tracked_frame = None
         self.detected_frame = None
         self.updated_frame = None
@@ -149,6 +153,8 @@ class Stream:
                 # frames.append(frame)
                 # cv2.imwrite(os.path.join(tmpPath, '{:04d}.jpg'.format(frame_number)), frame)
                 self.frame = frame
+                if not is_init:
+                    self.prv_frame = frame
 
                 # detect things
                 self.detectFrame()
@@ -162,11 +168,17 @@ class Stream:
                 # update trackers (remove undetected trackers)
                 self.updateTrackers()
 
+                # calc optical flow
+                self.calcFlow()
+
                 # stacck frames together
                 self.stackFrames()
 
                 # store stacked image
                 cv2.imwrite(os.path.join(tmpPath, '{:04d}.jpg'.format(frame_number)), self.stacked_frame)
+
+                # store last frame
+                self.prv_frame = frame
 
             frame_number += 1
             pbar.update()
@@ -264,12 +276,29 @@ class Stream:
 
         self.box_pairs = pairs
 
+    def calcFlow(self):
+        flow = cv2.calcOpticalFlowFarneback(self.prv_frame, self.frame)
+        h, w = self.frame.shape[:2]
+        my_dpi = 1
+        fig = plt.figure(figsize=(w/my_dpi, h/my_dpi), dpi=my_dpi)
+        canvas = FigureCanvas(fig)
+        ax = fig.add_subplot(111)
+        ax.imshow(self.frame, interpolation='bicubic')
+        ax.set_xticks([])
+        ax.set_yticks([])
+        y, x = np.mgrid[0:h:1, 0:w:1].reshape(2, -1).astype(int)
+        fx, fy = flow[y, x].T
+        idc = range(0, h * w, step)
+        ax.quiver(x[idc], y[idc], fx[idc], fy[idc], color=qcolor)
+        canvas.draw()  
+        self.flow_frame = np.fromstring(canvas.tostring_rgb(), dtype='uint8')
+
     def stackFrames(self, zoom_factor=0.25):
         pad = 30
         dim = (int(self.frame.shape[1] * zoom_factor), int(self.frame.shape[0] * zoom_factor))
         # frames
         frames = (
-            cv2.resize(self.frame, dim, interpolation = cv2.INTER_AREA), 
+            cv2.resize(self.flow_frame, dim, interpolation = cv2.INTER_AREA), 
             cv2.resize(self.detected_frame, dim, interpolation = cv2.INTER_AREA),
             cv2.resize(self.tracked_frame, dim, interpolation = cv2.INTER_AREA),
             cv2.resize(self.updated_frame, dim, interpolation = cv2.INTER_AREA))
