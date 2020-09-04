@@ -11,6 +11,7 @@ from os import listdir
 from os.path import isfile, join
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+from copy import deepcopy
 
 # initialize a dictionary that maps strings to their corresponding
 # OpenCV object tracker implementations
@@ -38,6 +39,7 @@ class Stream:
         self.trackers = []
         self.tracker_color = [255, 0, 0]
         self.frame = None
+        self.cur_frame = None
         self.prv_frame = None
         self.flow_frame = None
         self.tracked_frame = None
@@ -62,15 +64,15 @@ class Stream:
         # oyster_metadata = self.thing.MetadataCatalog.get(self.thing.name + "_train")
         # predictor = self.thing.predictor        
         # Prediction
-        frame = self.frame
+        self.detected_frame = deepcopy(self.frame)
 
-        outputs = self.thing.predictor(frame)
+        outputs = self.thing.predictor(self.detected_frame)
         predictions = outputs["instances"].to("cpu")
         # masks = (predictions.pred_masks.any(dim=0) > 0).numpy()
         boxes = predictions.pred_boxes.tensor.numpy() if predictions.has("pred_boxes") else None
         self.detected_boxes = boxes
        
-        v = Visualizer(frame[:, :, ::-1],
+        v = Visualizer(self.detected_frame[:, :, ::-1],
                     metadata=self.thing.metadata,
                     scale=1,
                     instance_mode=ColorMode.SEGMENTATION
@@ -92,16 +94,15 @@ class Stream:
 
 
     def trackFrame(self):
-        frame = self.frame
+        self.tracked_frame  = deepcopy(self.frame)
 
         self.tracked_boxes = []
         self.tracked_succes = []
         for tracker in self.trackers:
-            (succes, box) = tracker.update(frame)
+            (succes, box) = tracker.update(self.tracked_frame)
             self.tracked_boxes.append(box)
             self.tracked_succes.append(succes)
 
-        self.tracked_frame = frame
         for box in self.tracked_boxes:
             (x, y, w, h) = [int(v) for v in box]
             cv2.rectangle(self.tracked_frame, (x, y), (x + w, y + h), self.tracker_color, 2)
@@ -153,8 +154,9 @@ class Stream:
                 # frames.append(frame)
                 # cv2.imwrite(os.path.join(tmpPath, '{:04d}.jpg'.format(frame_number)), frame)
                 self.frame = frame
+                self.cur_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 if not is_init:
-                    self.prv_frame = frame
+                    self.prv_frame = self.cur_frame
 
                 # detect things
                 self.detectFrame()
@@ -178,7 +180,7 @@ class Stream:
                 cv2.imwrite(os.path.join(tmpPath, '{:04d}.jpg'.format(frame_number)), self.stacked_frame)
 
                 # store last frame
-                self.prv_frame = frame
+                self.prv_frame = self.cur_frame
 
             frame_number += 1
             pbar.update()
@@ -269,29 +271,40 @@ class Stream:
             del self.trackers[i]
 
         # draw the updated frame
-        self.updated_frame = self.frame
+        self.updated_frame = deepcopy(self.frame)
         for box in self.tracked_boxes:
             (x, y, w, h) = [int(v) for v in box]
-            cv2.rectangle(self.tracked_frame, (x, y), (x + w, y + h), self.tracker_color, 2)
+            cv2.rectangle(self.updated_frame, (x, y), (x + w, y + h), self.tracker_color, 2)
 
         self.box_pairs = pairs
 
     def calcFlow(self):
-        flow = cv2.calcOpticalFlowFarneback(self.prv_frame, self.frame)
+        flow = cv2.calcOpticalFlowFarneback(self.prv_frame, self.cur_frame, None, 0.5, 3, 7, 3, 5, 1.2, 0)
         h, w = self.frame.shape[:2]
-        my_dpi = 1
-        fig = plt.figure(figsize=(w/my_dpi, h/my_dpi), dpi=my_dpi)
-        canvas = FigureCanvas(fig)
-        ax = fig.add_subplot(111)
-        ax.imshow(self.frame, interpolation='bicubic')
-        ax.set_xticks([])
-        ax.set_yticks([])
-        y, x = np.mgrid[0:h:1, 0:w:1].reshape(2, -1).astype(int)
-        fx, fy = flow[y, x].T
-        idc = range(0, h * w, step)
-        ax.quiver(x[idc], y[idc], fx[idc], fy[idc], color=qcolor)
-        canvas.draw()  
-        self.flow_frame = np.fromstring(canvas.tostring_rgb(), dtype='uint8')
+        bulk_flow = flow.sum(axis=(0, 1))/(h*w)
+        center = (int(w/2), int(h/2))
+        self.flow_frame = cv2.arrowedLine(self.frame, center, 
+            (center[0]+int(bulk_flow[0]*500), center[1]+int(bulk_flow[1]*500)), (255, 0, 0), 5)
+
+        # my_dpi = 100
+        # fig = plt.figure(figsize=(w/my_dpi, h/my_dpi), dpi=my_dpi)
+        # canvas = FigureCanvas(fig)
+        # # ax = fig.add_subplot(111)
+        # ax = fig.add_axes((0, 0, 1, 1))
+        # ax.imshow(self.cur_frame, interpolation='bicubic')
+        # ax.set_xticks([])
+        # ax.set_yticks([])
+        # y, x = np.mgrid[0:h:1, 0:w:1].reshape(2, -1).astype(int)
+        # fx, fy = flow[y, x].T
+        # step = 25
+        # # idc = range(0, h * w, step)
+        # idc = []
+        # for i in range(0, h, step):
+        #     for j in range(0, w, step):
+        #         idc.append(i*w+j)
+        # ax.quiver(x[idc], y[idc], fx[idc], fy[idc], color='red')
+        # canvas.draw()  
+        # self.flow_frame = np.fromstring(canvas.tostring_rgb(), dtype='uint8').reshape((h, w, 3))
 
     def stackFrames(self, zoom_factor=0.25):
         pad = 30
