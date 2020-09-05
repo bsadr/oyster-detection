@@ -53,12 +53,7 @@ class Stream:
         # output: (mapped detected index, iou) 
         self.box_pairs = dict() 
         self.bound_overlap_reomve = 0.25  # remove tracker for low overlaps
-        self.bound_overlap_high = 0.5  # re-init the tracker for low overlaps
-
-    def createTrackers(self):
-        # initialize OpenCV's special multi-object tracker
-        # self.trackers = cv2.MultiTracker_create()
-        pass
+        self.bound_overlap_high = 0.75  # re-init the tracker for high overlaps
 
     def detectFrame(self):
         # oyster_metadata = self.thing.MetadataCatalog.get(self.thing.name + "_train")
@@ -138,33 +133,24 @@ class Stream:
         frame_number = fs-1
         # frames = []
         self.thing.setModel()
-        self.createTrackers()
         pbar = tqdm(total=fe-fs, unit=" frames")
-        # success, frame = video.read()
-        # if success:
-        #    self.frame = frame
-        #    self.detectFrame()
-        #    self.initTrackers()
         is_init = False
         while video.isOpened() and frame_number<fe:
             pbar.set_description("Iterating video, frame {}".format(frame_number))
             success, frame = video.read()
             if success and frame_number % round(fps/set_fps) == 0:
                 # store original frame
-                # frames.append(frame)
                 # cv2.imwrite(os.path.join(tmpPath, '{:04d}.jpg'.format(frame_number)), frame)
                 self.frame = frame
                 self.cur_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 if not is_init:
                     self.prv_frame = self.cur_frame
+                    is_init = True
 
                 # detect things
                 self.detectFrame()
 
                 # track things
-                if not is_init:
-                    self.initTrackers()
-                    is_init = True
                 self.trackFrame()
 
                 # update trackers (remove undetected trackers)
@@ -205,10 +191,6 @@ class Stream:
 
     def updateTrackers(self):
         # track_boxmode = BoxMode.XYXY_ABS
-        # tracked_boxes = [
-        #     BoxMode.convert(box, track_boxmode, BoxMode.XYXY_ABS)
-        #     for box in self.tracked_boxes]
-        # tracked_boxes = torch.as_tensor(tracked_boxes).reshape(-1, 4)  # guard against no boxes
         tracked_boxes = torch.as_tensor(self.tracked_boxes).reshape(-1, 4)  # guard against no boxes
         tracked_boxes = Boxes(tracked_boxes)
         undetected_tracked_indcies = list(range(len(self.tracked_boxes)))
@@ -241,13 +223,12 @@ class Stream:
             # output: (mapped detected index, iou) 
             pairs[tracked_ind] = (detected_ind, tracked_ovr)
 
-            # if the tracker overlap is not high enough, re-init the tracker
-            if tracked_ovr<self.bound_overlap_high: 
+            # if the tracker overlap is high enough, re-init the tracker 
+            if tracked_ovr>self.bound_overlap_high: 
                 # re-init the tracker with the detected box
                 box = self.detected_boxes[detected_ind]
                 self.trackers[tracked_ind].init(self.frame, 
                     (box[0], box[1], box[2]-box[0], box[3]-box[1])) # x, y, w, h
-                tracked_ovr = 1
         
             # if the tracker overlap is not low, delete the tracker
             if tracked_ovr<self.bound_overlap_reomve: 
