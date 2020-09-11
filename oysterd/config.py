@@ -30,8 +30,9 @@ class Config:
         path = "/home/bsadrfa/behzad/projects/data_oyster/video/GH020870.MP4",
         fps = -1,
         fs = 2400,
-        fe = 2815,
-        tmp = "/scratch2/bsadrfa/oyster/tmp2/"
+        fe = 2412,
+#        tmp = "/scratch2/bsadrfa/oyster/tmp2/"
+        tmp = "/home/bsadrfa/behzad/projects/oyster//tmp2/"
 
     )
     SOLVER_IMS_PER_BATCH = 2
