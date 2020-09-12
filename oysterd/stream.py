@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from copy import deepcopy
 from matplotlib import cm
+from config import Config
 
 # initialize a dictionary that maps strings to their corresponding
 # OpenCV object tracker implementations
@@ -34,54 +35,38 @@ class Stream:
     def __init__(self, thing, vdata=None):
         self.thing = thing
         self.count = 0
-        self.cfg_thing = thing.cfg_thing
+        self.cfg = thing.cfg_thing
         self.thing.setModel()
+        self.use_flow = True
         if not vdata:
-            self.vdata = self.cfg_thing.vdata
+            self.vdata = self.cfg.vdata
         else:
             self.vdata = vdata
         self.tracker_type = "kcf"
         self.trackers = dict()
         self.tracked_boxes = dict()
-        self.frame = None
-        self.cur_frame = None
-        self.prv_frame = None
-        self.flow_frame = None
+        self.detected_boxes = None
+        self.bound_overlap_reomve = 0.25  # remove tracker for low overlaps
+        self.bound_overlap_high = 0.4  # re-init the tracker for high overlaps
         self.tracked_frame = None
+        self.frame = None
         self.detected_frame = None
         self.updated_frame = None
         self.stacked_frame =  None
-        self.detected_boxes = None
-        # input: tracked box
-        # output: (mapped detected index, iou) 
-        # self.box_pairs = dict() 
-        self.bound_overlap_reomve = 0.25  # remove tracker for low overlaps
-        self.bound_overlap_high = 0.5  # re-init the tracker for high overlaps
-        self.vis =  None
-
-    def initVisualizer(self, font_size=4):
-        self.vis = Visualizer(self.frame,
-                    metadata=self.thing.metadata,
-                    instance_mode=ColorMode.SEGMENTATION
-                    )
-        self.vis._default_font_size *= font_size
-
-    def resetVis(self):
-        self.vis.img = np.asarray(self.frame[:, :, ::-1]).clip(0, 255).astype(np.uint8)
-        self.vis.output = VisImage(self.vis.img)
+        self.cur_frame = None
+        self.prv_frame = None
+        self.flow_frame = None
 
     def detectFrame(self):
         self.detected_frame = deepcopy(self.frame)
         outputs = self.thing.predictor(self.detected_frame)
         predictions = outputs["instances"].to("cpu")
-        scores = predictions.scores if predictions.has("scores") else None
-        self.detected_boxes  = predictions.pred_boxes.tensor.numpy() if predictions.has("pred_boxes") else None
-        # masks = (predictions.pred_masks.any(dim=0) > 0).numpy()
-        # areas = np.prod(boxes[:, 2:] - boxes[:, :2], axis=1)
+        # scores = predictions.scores if predictions.has("scores") else None
+        detected_boxes  = predictions.pred_boxes.tensor.numpy() if predictions.has("pred_boxes") else None
+        self.detected_boxes = np.asarray([checkBox(b) for b in detected_boxes]).astype(int)
+#        self.cfg.debug(self.detected_boxes)
         for i, box in enumerate(self.detected_boxes):
-            (x0, y0, x1, y1) = [int(v) for v in box]
-            cv2.rectangle(self.detected_frame, (x0, y0), (x1, y1), rec_colors[i%max_recs], 3)
-            cv2.putText(self.detected_frame, '{}'.format(i+1), (x0, y0+50), cv2.FONT_HERSHEY_DUPLEX, 2, (0, 0, 100), 3, cv2.LINE_AA)
+            self.draw_box(self.detected_frame, i, box)    
 
     def trackFrame(self):
         self.tracked_frame  = deepcopy(self.frame)
@@ -90,24 +75,24 @@ class Stream:
             (success, box) = tracker["tracker"].update(self.tracked_frame)
             if success:
                 tracker["success"] = 0
-                self.tracked_boxes[i] = box
+                self.tracked_boxes[i] = xyxyBox(box)
                 self.draw_box(self.tracked_frame, i, box)    
             else:
                 if self.remove_tracker(i):
                     removed_trackers.append(i) 
                 else:
-                    self.draw_box(self.tracked_frame, i, box)    
+                    self.draw_box(self.tracked_frame, i, self.tracked_boxes[i])    
         for i in removed_trackers:
             del self.trackers[i]
             del self.tracked_boxes[i]
 
     def countVideo(self, vdata=None):
         if not vdata:
-            vdata = self.cfg_thing.video
+            vdata = self.cfg.video
         set_fps, fs, fe = vdata['fps'], vdata['fs'], vdata['fe']
         video = cv2.VideoCapture(vdata['path'])
         fps = int(video.get(cv2.CAP_PROP_FPS))
-        print('fps: {}'.format(fps))
+        self.cfg.debug('fps: {}'.format(fps))
         set_fps = fps if set_fps < 0 else set_fps
         tmpPath = os.path.join(vdata['tmp'], '{}_fps_{}'.format(Path(vdata['path']).stem, set_fps))
         os.makedirs(tmpPath, exist_ok=True)
@@ -119,8 +104,8 @@ class Stream:
         print('Video is being exported to: {}'.format(tmpPath))
         frame_count = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
         # duration = frame_count / fps
-        if fe < 0:
-            fe = frame_count
+        if fe < 0 or fe>=frame_count:
+            fe = frame_count-1
         video.set(cv2.CAP_PROP_POS_FRAMES, fs-1)
         frame_number = fs-1
         # frames = []
@@ -137,7 +122,6 @@ class Stream:
                 self.cur_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 if not is_init:
                     self.prv_frame = self.cur_frame
-                    self.initVisualizer()
                     is_init = True
 
                 # detect things
@@ -158,7 +142,7 @@ class Stream:
                 # store stacked image
                 cv2.imwrite(os.path.join(tmpPath, '{:04d}.jpg'.format(frame_number)), self.stacked_frame)
 
-                cv2.imshow('{:04d}'.format(frame_number), self.stacked_frame)
+                # cv2.imshow('{:04d}'.format(frame_number), self.stacked_frame)
 
                 # store last frame
                 self.prv_frame = self.cur_frame
@@ -184,25 +168,23 @@ class Stream:
         pbar.close()
 
     def updateTrackers(self):
-        # track box mode: BoxMode.XYWH_ABS
         tracked_boxes = Boxes(list(self.tracked_boxes.values()))
         undetected_tracked_indcies = list(range(len(tracked_boxes)))
         tracked_indices = list(self.tracked_boxes.keys())
 
-        # detected box mode: BoxMode.XYXY_ABS
-        detected_boxes = BoxMode.convert(self.detected_boxes, BoxMode.XYXY_ABS, BoxMode.XYWH_ABS)
-        # detected box mode: BoxMode.XYWH_ABS
-        detected_boxes = Boxes(detected_boxes)
+        detected_boxes = Boxes(self.detected_boxes)
         new_detected_indcies = list(range(len(detected_boxes)))
 
         overlaps = pairwise_iou(tracked_boxes, detected_boxes)
-        # pairs = dict()
-        # map the detected boxes to the tracked boxes
+        self.cfg.debug(overlaps)
+
+        pairs = dict() # map the detected boxes to the tracked boxes (not used)       
+
         for _ in range(min(len(tracked_boxes), len(detected_boxes))):
             # find which detected box maximally covers each tracked box
             # and get the iou amount of coverage for each tracked box
             max_overlaps, argmax_overlaps = overlaps.max(dim=0)
-            # print(overlaps)
+            # self.cfg.debug(overlaps)
 
             # find which detected box is 'best' covered (i.e. 'best' = most iou)
             ovr, detected_ind = max_overlaps.max(dim=0)
@@ -213,7 +195,7 @@ class Stream:
             new_detected_indcies.remove(detected_ind)
             
             # find the tracked box that covers the best detected box
-            tracked_ind = argmax_overlaps[detected_ind]
+            tracked_ind = argmax_overlaps[detected_ind].item()
             # remove the tracked box from list
             undetected_tracked_indcies.remove(tracked_ind)
             # undetected_tracked_indcies.pop(tracked_ind)
@@ -221,12 +203,12 @@ class Stream:
             # record the iou coverage of and assigned detected box for this tracked box
             # input: tracked box
             # output: (mapped detected index, iou) 
-            # pairs[self.trackers_id[tracked_ind]] = (detected_ind, ovr)
+            pairs[tracked_indices[tracked_ind]] = (detected_ind, ovr)
 
             # if the tracker overlap is high enough, re-init the tracker 
             if ovr>self.bound_overlap_high: 
                 # re-init the tracker with the detected box
-                self.update_tracker(tracked_indices[tracked_ind], detected_boxes[detected_ind])
+                self.update_tracker(tracked_indices[tracked_ind], self.detected_boxes[detected_ind])
 
             # if the tracker overlap is not low, delete the tracker
 #            if ovr<self.bound_overlap_reomve: 
@@ -237,9 +219,11 @@ class Stream:
             overlaps[tracked_ind, :] = -1
             overlaps[:, detected_ind] = -1
 
+#        self.cfg.debug(pairs)
+
         # add trackers for the new detected boxes
         for i in new_detected_indcies:
-            self.add_tracker(detected_boxes[i])
+            self.add_tracker(self.detected_boxes[i])
 
         # remove track boxes that are not detected
         for i in sorted(undetected_tracked_indcies, reverse=True):
@@ -251,9 +235,8 @@ class Stream:
             self.draw_box(self.updated_frame, i, box)    
 
     def draw_box(self, frame, idx, box):
-        (x, y, w, h) = [int(v) for v in box]
-        cv2.rectangle(frame, (x, y), (x + w, y + h), rec_colors[idx % max_recs], 3)
-        cv2.putText(frame, '{}'.format(idx), (x, y+50), cv2.FONT_HERSHEY_DUPLEX, 2, (0, 0, 100), 3, cv2.LINE_AA)
+        cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), rec_colors[idx%max_recs], 3)
+        cv2.putText(frame, '{}'.format(idx), (box[0], box[1]+50), cv2.FONT_HERSHEY_DUPLEX, 2, (0, 0, 100), 3, cv2.LINE_AA)
 
     def add_tracker(self, box):
         self.count += 1
@@ -261,15 +244,16 @@ class Stream:
             tracker=OPENCV_OBJECT_TRACKERS[self.tracker_type](),
             success=0  # new tracker
             )
-        tuple_box = tuple(box[:].tensor.numpy()[0])
-        self.trackers[self.count]["tracker"].init(self.frame, tuple_box) # x, y, w, h
-        self.tracked_boxes[self.count]=tuple_box
+        b = xywhBox(box)
+        self.trackers[self.count]["tracker"].init(self.frame, b) # x, y, w, h
+        self.tracked_boxes[self.count]=box
 
     def update_tracker(self, idx, box):
-        tuple_box = tuple(box[:].tensor.numpy()[0])
-        self.trackers[idx]["tracker"].init(self.frame, tuple_box) # x, y, w, h
+        b = xywhBox(box)
+        self.trackers[idx]["tracker"].init(self.frame, b) # x, y, w, h
         self.trackers[idx]["success"] = 0 # updated tracker
-        self.tracked_boxes[idx]=tuple_box
+        self.tracked_boxes[idx]=box
+#        self.cfg.debug('{} box updated.'.format(idx))
 
     def remove_tracker(self, idx, max_miss = 4):
         self.trackers[idx]["success"] += 1
@@ -279,33 +263,33 @@ class Stream:
             return False
 
     def calcFlow(self):
-        self.flow_frame = self.frame
-        # flow = cv2.calcOpticalFlowFarneback(self.prv_frame, self.cur_frame, None, 0.5, 3, 7, 3, 5, 1.2, 0)
-        # h, w = self.frame.shape[:2]
-        # bulk_flow = flow.sum(axis=(0, 1))/(h*w)
-        # center = (int(w/2), int(h/2))
-        # self.flow_frame = cv2.arrowedLine(self.frame, center, 
-        #     (center[0]+int(bulk_flow[0]*500), center[1]+int(bulk_flow[1]*500)), (255, 0, 0), 5)
+        if not self.use_flow:
+            self.flow_frame = self.frame
+        else:
+            flow = cv2.calcOpticalFlowFarneback(self.prv_frame, self.cur_frame, None, 0.5, 3, 7, 3, 5, 1.2, 0)
+            h, w = self.frame.shape[:2]
+            bulk_flow = flow.sum(axis=(0, 1))/(h*w)
+            center = (int(w/2), int(h/2))
+            self.flow_frame = cv2.arrowedLine(self.frame, center, 
+                (center[0]+int(bulk_flow[0]*200), center[1]+int(bulk_flow[1]*200)), (255, 0, 0), 5)
 
-        # my_dpi = 100
-        # fig = plt.figure(figsize=(w/my_dpi, h/my_dpi), dpi=my_dpi)
-        # canvas = FigureCanvas(fig)
-        # # ax = fig.add_subplot(111)
-        # ax = fig.add_axes((0, 0, 1, 1))
-        # ax.imshow(self.cur_frame, interpolation='bicubic')
-        # ax.set_xticks([])
-        # ax.set_yticks([])
-        # y, x = np.mgrid[0:h:1, 0:w:1].reshape(2, -1).astype(int)
-        # fx, fy = flow[y, x].T
-        # step = 25
-        # # idc = range(0, h * w, step)
-        # idc = []
-        # for i in range(0, h, step):
-        #     for j in range(0, w, step):
-        #         idc.append(i*w+j)
-        # ax.quiver(x[idc], y[idc], fx[idc], fy[idc], color='red')
-        # canvas.draw()  
-        # self.flow_frame = np.fromstring(canvas.tostring_rgb(), dtype='uint8').reshape((h, w, 3))
+            # my_dpi = 100
+            # fig = plt.figure(figsize=(w/my_dpi, h/my_dpi), dpi=my_dpi)
+            # canvas = FigureCanvas(fig)
+            # ax = fig.add_axes((0, 0, 1, 1))
+            # ax.imshow(self.cur_frame, interpolation='bicubic')
+            # ax.set_xticks([])
+            # ax.set_yticks([])
+            # y, x = np.mgrid[0:h:1, 0:w:1].reshape(2, -1).astype(int)
+            # fx, fy = flow[y, x].T
+            # step = 25
+            # idc = []
+            # for i in range(0, h, step):
+            #     for j in range(0, w, step):
+            #         idc.append(i*w+j)
+            # ax.quiver(x[idc], y[idc], fx[idc], fy[idc], color='red')
+            # canvas.draw()  
+            # self.flow_frame = np.fromstring(canvas.tostring_rgb(), dtype='uint8').reshape((h, w, 3))
 
     def stackFrames(self, zoom_factor=0.25):
         pad = 30
@@ -313,6 +297,7 @@ class Stream:
         # frames
         frames = (
             cv2.resize(self.flow_frame, dim, interpolation = cv2.INTER_AREA), 
+#            cv2.resize(self.frame, dim, interpolation = cv2.INTER_AREA), 
             cv2.resize(self.detected_frame, dim, interpolation = cv2.INTER_AREA),
             cv2.resize(self.tracked_frame, dim, interpolation = cv2.INTER_AREA),
             cv2.resize(self.updated_frame, dim, interpolation = cv2.INTER_AREA))
@@ -332,3 +317,22 @@ class Stream:
         self.stacked_frame = np.concatenate((
             np.concatenate((frames[0], frames[1]), axis=0), splitter, 
             np.concatenate((frames[2], frames[3]), axis=0)), axis=1)
+
+def checkBox(a):
+    # convert XYXY to X_min, Y_min, X_max, Y_max
+    b = a
+    if a[0]>a[2]:
+        b[0] = a[2]
+        b[2] = a[0]
+    if a[1]>a[3]:
+        b[1] = a[3]
+        b[3] = a[1]
+    return b
+
+def xyxyBox(a):
+    # convert XYWH to XYXY
+    return np.asarray([a[0], a[1], a[0]+a[2], a[1]+a[3]]).astype(int)
+
+def xywhBox(a):
+    # convert XYXY to XYWH
+    return (a[0], a[1], a[2]-a[2], a[3]-a[1])
