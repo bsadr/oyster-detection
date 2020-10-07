@@ -31,8 +31,8 @@ class Config:
     video = dict(
         path = "/home/bsadrfa/behzad/projects/data_oyster/video/GH020870.MP4",
         fps = -1,
-        fs = 2400,
-        fe = 2500,
+        fs = 2500,
+        fe = 3400,
         tmp = "/scratch2/bsadrfa/oyster/tmp2/"
 #        tmp = "/home/bsadrfa/behzad/projects/oyster//tmp2/"
 
