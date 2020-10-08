@@ -10,6 +10,8 @@ import argparse
 from pathlib import Path
 import cv2
 from tqdm import tqdm
+from os import listdir
+from os.path import isfile, join, isdir
 # oyster detection
 from thing import Thing
 
@@ -21,6 +23,11 @@ def parse_video(vdata):
     set_fps = fps if set_fps < 0 else set_fps
     tmpPath = os.path.join(vdata['tmp'], '{}_fps_{}'.format(Path(vdata['path']).stem, set_fps))
     os.makedirs(tmpPath, exist_ok=True)
+    image_types = ("jpg", "jpeg", "png", "bmp", "tif", "tiff")
+    tmp_files = [f for f in listdir(tmpPath)
+                if isfile(join(tmpPath, f)) and f.lower().split('.')[-1] in image_types]
+    for f in tmp_files:
+        os.remove(join(tmpPath, f))
     print('Video is exported to: {}'.format(tmpPath))
     frame_count = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
     # duration = frame_count / fps
@@ -50,7 +57,6 @@ parser.add_argument("-i", required=False,
                     help="detecron2 model id (in oyster config file)")
 parser.add_argument("-p", required=False,
                     dest="path",
-                    default=None,
                     help="video path")
 parser.add_argument("-fps", required=False,
                     dest="fps",
@@ -58,15 +64,12 @@ parser.add_argument("-fps", required=False,
                     help="fps")
 parser.add_argument("-fs", required=False,
                     dest="fs",
-                    default=1,
                     help="start frame")
 parser.add_argument("-fe", required=False,
                     dest="fe",
-                    default=-1,
                     help="end frame, -1 for the last")
 parser.add_argument("-t", required=False,
                     dest="tmp",
-                    default=None,
                     help="temp path")
 args = parser.parse_args()
 model_id = int(args.model_id)
@@ -79,5 +82,6 @@ vdata = dict (
     fe = int(args.fe) if args.fe else thing.cfg_thing.video["fe"],
     tmp = args.tmp if args.tmp else thing.cfg_thing.video["tmp"]
 )
+print(vdata)
 frames, srcPath = parse_video(vdata)
 thing.infer(srcPath)

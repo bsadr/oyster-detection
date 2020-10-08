@@ -120,14 +120,17 @@ class Thing:
         
         self.predictor = DefaultPredictor(self.cfg_dtc)
         if folder is not None:
-            print('folder infer: {}'.format(folder))
+            print('input folder: {}'.format(folder))
             dataset_dicts = simpleDict(folder)
-            pr_dir = os.path.join(self.cfg_dtc.OUTPUT_DIR, folder)
+            pr_dir = os.path.join(self.cfg_dtc.OUTPUT_DIR, os.path.basename(folder))
             os.makedirs(pr_dir, exist_ok=True)
             bk_dir = os.path.join(pr_dir, 'mask')
             os.makedirs(bk_dir, exist_ok=True)
             in_dir = os.path.join(pr_dir, 'infer')
-            os.makedirs(bk_dir, exist_ok=True)
+            os.makedirs(in_dir, exist_ok=True)
+            print('output folder: {}'.format(pr_dir))
+            print('masks: {}'.format(bk_dir))
+            print('scores: {}'.format(in_dir))
             for d in dataset_dicts:
                 im = cv2.imread(d["file_name"])
                 bk = np.zeros(shape=[d["height"], d["width"], 3], dtype=np.uint8)
