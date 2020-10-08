@@ -14,18 +14,13 @@ class Config:
 #    show_debug = True
     show_debug = False
     folders = dict(
-        data="/home/bsadrfa/behzad/projects/data_oyster/db2/",  # training and evaluation data folder
-        # infer="/home/bsadrfa/behzad/projects/data_oyster/data/frames/IMG_10869_fps_5/4",
-        # infer="/scratch2/bsadrfa/tmp/GH010869_fps_30",
+        # data: training and evaluation data folder 
+        data="/home/bsadrfa/behzad/projects/data_oyster/db2/",  
+        # infer: test/inferrence folder, will be overriden if a folder passed to thing.infer() in thing.py
         infer="/home/bsadrfa/behzad/projects/oyster/video/video_20870",
-        save="/home/bsadrfa/behzad/projects/data_oyster/output/predictions",
-        ground_truth="/home/bsadrfa/behzad/projects/data_oyster/output/ground_truth", # to save not load
-        pred="/home/bsadrfa/behzad/projects/data_oyster/img_pred/",
-        model="/home/bsadrfa/behzad/projects/data_oyster/model/",
-        # output="/home/bsadrfa/behzad/projects/output_oyster/"
+        # output: output folder
         output="/home/bsadrfa/behzad/projects/oyster/output/frames/",
-        # output="/scratch2/bsadrfa/tmp/output/frames/",
-        # output="output/frames/",
+        # weights: weights folder used inference/test
         weights="/home/bsadrfa/behzad/projects/oyster/oyster-detection/output/00/"
     )
     video = dict(
@@ -34,8 +29,6 @@ class Config:
         fs = 2500,
         fe = 3400,
         tmp = "/scratch2/bsadrfa/oyster/tmp2/"
-#        tmp = "/home/bsadrfa/behzad/projects/oyster//tmp2/"
-
     )
     SOLVER_IMS_PER_BATCH = 2
     SOLVER_BASE_LR = 0.00025
@@ -53,7 +46,7 @@ class Config:
         "COCO-Detection/rpn_R_50_C4_1x.yaml",
         "COCO-Detection/fast_rcnn_R_50_FPN_1x.yaml"
     ]
-    resume = False
+    resume = False # whether or not to resume/restart the training
     MODEL_WEIGHTS = ["model_final.pth"]
 
     thresh_percent = 60

@@ -1,44 +1,17 @@
-import torch, torchvision
-import detectron2
-from detectron2.utils.logger import setup_logger
-setup_logger()
-
-# import some common detectron2 utilities
-from detectron2 import model_zoo
-from detectron2.config import get_cfg
+''' 
+usage: python infer_video.py -i <model_number> -p <video_path>
+default model_number is 0
+default video_path is defined in the config.py: Config.folders['infer'] 
+'''
 
 # Other packages
 import os
 import argparse
 from pathlib import Path
-# oyster detection
-from config import Config, InputType
-from train import register, infer
 import cv2
 from tqdm import tqdm
-
-
-
-def getModel(oyster_cfg, cfg_id=0):
-    cfg = get_cfg()
-    cfg.OUTPUT_DIR = os.path.join(oyster_cfg.folders['output'], '{:02d}'.format(cfg_id))
-    cfg.merge_from_file(model_zoo.get_config_file(oyster_cfg.config_file[cfg_id]))
-    # cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url(oyster_cfg.config_file[cfg_id])
-    cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, oyster_cfg.MODEL_WEIGHTS[0])
-    cfg.DATASETS.TRAIN = ("oyster_train",)
-    cfg.DATASETS.TEST = ("oyster_val",)
-    cfg.DATALOADER.NUM_WORKERS = 2
-    cfg.SOLVER.IMS_PER_BATCH = 2
-    cfg.SOLVER.BASE_LR = oyster_cfg.SOLVER_BASE_LR
-    cfg.SOLVER.MAX_ITER = oyster_cfg.SOLVER_MAX_ITER
-    cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 256  # faster, and good enough for this toy dataset (default: 512)
-    cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only has one class (oyster)
-    # evaluator = COCOEvaluator("oyster_val", cfg, False, output_dir=cfg.OUTPUT_DIR)
-    # val_loader = build_detection_test_loader(cfg, "oyster_val")
-    # results = inference_on_dataset(trainer.model, val_loader, evaluator)
-
-    return cfg
-
+# oyster detection
+from thing import Thing
 
 def parse_video(vdata):
     set_fps, fs, fe = vdata['fps'], vdata['fs'], vdata['fe']
@@ -56,7 +29,7 @@ def parse_video(vdata):
     video.set(cv2.CAP_PROP_POS_FRAMES, fs-1)
     frame_number = fs-1
     frames = []
-    pbar = tqdm(total=fe-fs, unit=" stitches")
+    pbar = tqdm(total=fe-fs, unit=" frames")
     while video.isOpened() and frame_number<fe-1:
         pbar.set_description("Importing video, frame {}".format(frame_number))
         success, frame = video.read()
@@ -70,50 +43,41 @@ def parse_video(vdata):
     return frames, tmpPath
 
 
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-i", required=False,
-                        dest="cfg_id",
-                        default=0,
-                        help="detecron2 model id (in oyster config file)")
-    parser.add_argument("-f", required=False,
-                        dest="folder",
-                        default=None,
-                        help="input folder")
-    parser.add_argument("-v", required=False,
-                        dest="video",
-                        default=None,
-                        help="video path")
-    parser.add_argument("-fps", required=False,
-                        dest="fps",
-                        default=-1,
-                        help="fps")
-    parser.add_argument("-fs", required=False,
-                        dest="fs",
-                        default=1,
-                        help="start frame")
-    parser.add_argument("-fe", required=False,
-                        dest="fe",
-                        default=-1,
-                        help="end frame, -1 for the last")
-    args = parser.parse_args()
-    cfg_id = int(args.cfg_id)
-    folder = args.folder
-    oyster_cfg = Config(cfg_id)
-    assert (cfg_id <= len(oyster_cfg.config_file))
-
-    oyster_metadata = register(oyster_cfg)
-    detectron_cfg = getModel(oyster_cfg, cfg_id)
-    if not args.video:
-        infer(oyster_cfg, detectron_cfg, oyster_metadata, cfg_id, folder)
-    else:
-        vdata = dict(
-            path = args.video,
-            fps = int(args.fps),
-            fs = int(args.fs),
-            fe = int(args.fe),
-            tmp = "/scratch1/bsadrfa/tmp/"
-        )
-        frames, srcPath = parse_video(vdata)
-        infer(oyster_cfg, detectron_cfg, oyster_metadata, cfg_id, srcPath)
+parser = argparse.ArgumentParser()
+parser.add_argument("-i", required=False,
+                    dest="model_id",
+                    default=0,
+                    help="detecron2 model id (in oyster config file)")
+parser.add_argument("-p", required=False,
+                    dest="path",
+                    default=None,
+                    help="video path")
+parser.add_argument("-fps", required=False,
+                    dest="fps",
+                    default=-1,
+                    help="fps")
+parser.add_argument("-fs", required=False,
+                    dest="fs",
+                    default=1,
+                    help="start frame")
+parser.add_argument("-fe", required=False,
+                    dest="fe",
+                    default=-1,
+                    help="end frame, -1 for the last")
+parser.add_argument("-t", required=False,
+                    dest="tmp",
+                    default=None,
+                    help="temp path")
+args = parser.parse_args()
+model_id = int(args.model_id)
+thing = Thing(model_id)
+thing.setModel()
+vdata = dict (
+    path = args.path if args.path else thing.cfg_thing.video["path"],
+    fps = int(args.fps) if args.fps else thing.cfg_thing.video["fps"],
+    fs = int(args.fs) if args.fs else thing.cfg_thing.video["fs"],
+    fe = int(args.fe) if args.fe else thing.cfg_thing.video["fe"],
+    tmp = args.tmp if args.tmp else thing.cfg_thing.video["tmp"]
+)
+frames, srcPath = parse_video(vdata)
+thing.infer(srcPath)
