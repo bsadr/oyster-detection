@@ -26,9 +26,9 @@ class Config:
     video = dict(
         path = "/home/bsadrfa/behzad/projects/data_oyster/video/GH020870.MP4",
         fps = -1,
-        fs = 2500,
-        fe = 3400,
-        tmp = "/scratch2/bsadrfa/oyster/tmp2/"
+        fs = 2685,
+        fe = 2785,
+        tmp = "/scratch2/bsadrfa/oyster/tmp2/sample1"
     )
     SOLVER_IMS_PER_BATCH = 2
     SOLVER_BASE_LR = 0.00025
@@ -49,7 +49,8 @@ class Config:
     resume = False # whether or not to resume/restart the training
     MODEL_WEIGHTS = ["model_final.pth"]
 
-    thresh_percent = 60
+#    thresh_percent = 60
+    thresh_percent = 95
     input = InputType.labelme
 
     def __init__(self, cfg_id=0):

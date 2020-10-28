@@ -402,7 +402,7 @@ class Stream:
             cv2.resize(self.frame, dim, interpolation = cv2.INTER_AREA), 
             cv2.resize(self.updated_frame, dim, interpolation = cv2.INTER_AREA))
         # labels
-        labels = [np.ones(shape=[pad, int(dim[0]), 3], dtype=np.uint8)*0 for i in range(len(frames))]
+        labels = [np.ones(shape=[pad, int(dim[0]), 3], dtype=np.uint8)*255 for i in range(len(frames))]
         # texts
         texts = (
             "Oysters: {}".format(self.count), "Detected + Tracked"
@@ -411,7 +411,7 @@ class Stream:
         org = (int(0.7*pad), int(0.7*pad))
         labels = [cv2.putText(l, texts[i], org, cv2.FONT_HERSHEY_DUPLEX, .7, (125, 255, 0), 1, cv2.LINE_AA) for i, l in enumerate(labels)]
         # vertical splitter pad
-        splitter = np.ones(shape=[int(dim[1]+pad), pad, 3], dtype=np.uint8)*0
+        splitter = np.ones(shape=[int(dim[1]+pad), pad, 3], dtype=np.uint8)*255
         # stack labels and frames
         frames = [np.concatenate((f, l), axis=0) for (f,l) in zip(frames, labels)]
         self.stacked_frame = np.concatenate((frames[0], splitter, frames[1]), axis=1)
