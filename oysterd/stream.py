@@ -177,6 +177,53 @@ class Stream:
         video.release()
         pbar.close()
 
+    def extractVideo(self, vdata=None, zoom_factor=0.5):
+        if not vdata:
+            vdata = self.cfg.video
+        set_fps, fs, fe = vdata['fps'], vdata['fs'], vdata['fe']
+        video = cv2.VideoCapture(vdata['path'])
+        fps = int(video.get(cv2.CAP_PROP_FPS))
+        self.cfg.debug('fps: {}'.format(fps))
+        set_fps = fps if set_fps < 0 else set_fps
+        tmpPath = os.path.join(vdata['tmp'], '{}_fps_{}/src'.format(Path(vdata['path']).stem, set_fps))
+        os.makedirs(tmpPath, exist_ok=True)
+        image_types = ("jpg", "jpeg", "png", "bmp", "tif", "tiff")
+        tmp_files = [f for f in listdir(tmpPath)
+                    if isfile(join(tmpPath, f)) and f.lower().split('.')[-1] in image_types]
+        for f in tmp_files:
+            os.remove(join(tmpPath, f))
+        print('Video is being exported to: {}'.format(tmpPath))
+        frame_count = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
+        # duration = frame_count / fps
+        if fe < 0 or fe>=frame_count:
+            fe = frame_count-1
+        video.set(cv2.CAP_PROP_POS_FRAMES, fs-1)
+        frame_number = fs-1
+        pbar = tqdm(total=fe-fs, unit=" frames")
+        while video.isOpened() and frame_number<fe:
+            pbar.set_description("Iterating video, frame {}".format(frame_number))
+            success, frame = video.read()
+            if success and frame_number % round(fps/set_fps) == 0:
+                dim = (int(frame.shape[1] * zoom_factor), int(frame.shape[0] * zoom_factor))
+                frame = cv2.resize(frame, dim, interpolation = cv2.INTER_AREA)
+                cv2.imwrite(os.path.join(tmpPath, '{:04d}.jpg'.format(frame_number)), frame)
+            frame_number += 1
+            pbar.update()
+        pbar.close()
+
+        # save outout video
+        height, width, _ = frame.shape
+        fourcc = cv2.VideoWriter_fourcc(*'MJPG')
+        video = cv2.VideoWriter(os.path.join(tmpPath, Path(vdata['path']).stem+'_src.avi'), fourcc, 5, (width,height))
+        stacked_files = [join(tmpPath, f) for f in listdir(tmpPath)
+                    if isfile(join(tmpPath, f)) and f.lower().split('.')[-1] in image_types]
+        stacked_files.sort()
+        pbar = tqdm(total=len(stacked_files), unit=" frames")
+        for f in stacked_files:
+            video.write(cv2.imread(f))
+            pbar.update()
+        video.release()
+        pbar.close()
 
     def lastVideo(self, vdata=None, newfps=15):
         if not vdata:

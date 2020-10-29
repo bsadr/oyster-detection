@@ -24,11 +24,12 @@ class Config:
         weights="/home/bsadrfa/behzad/projects/oyster/oyster-detection/output/00/"
     )
     video = dict(
-        path = "/home/bsadrfa/behzad/projects/data_oyster/video/GH020870.MP4",
+#        path = "/home/bsadrfa/behzad/projects/data_oyster/video/GH020870.MP4",
+        path = "/home/bsadrfa/behzad/projects/data_oyster/video/GH010869.MP4",
         fps = -1,
-        fs = 2685,
-        fe = 2785,
-        tmp = "/scratch2/bsadrfa/oyster/tmp2/sample1"
+        fs = 7500,
+        fe = 7800,
+        tmp = "/scratch2/bsadrfa/oyster/tmp2/sample2"
     )
     SOLVER_IMS_PER_BATCH = 2
     SOLVER_BASE_LR = 0.00025

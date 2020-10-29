@@ -39,4 +39,5 @@ vdata = dict (
     tmp = args.tmp if args.tmp else thing.cfg_thing.video["tmp"]
 )
 stream = Stream(thing, vdata)
-stream.countVideo()
+#stream.countVideo()
+stream.extractVideo()
