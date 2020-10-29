@@ -41,18 +41,18 @@ class Thing:
         self.predictor = None
 
     def register(self):
-        for d in ["_train", "_val"]:
+        for d in ["train", "val"]:
             if self.cfg_thing.input == InputType.labelme:
-                DatasetCatalog.register(self.name + d,
+                DatasetCatalog.register(self.name + '_' + d,
                                         lambda d=d: labelmeDict(self.cfg_thing.folders['data'], d))
             elif self.cfg_thing.input == InputType.makesense:
-                DatasetCatalog.register(self.name + d,
+                DatasetCatalog.register(self.name + '_' + d,
                                         lambda d=d: makesenseDict(self.cfg_thing.folders['data'], d))
             elif self.cfg_thing.input == InputType.voc:
-                DatasetCatalog.register(self.name + d,
+                DatasetCatalog.register(self.name + '_' + d,
                                         lambda d=d: vocDict(self.cfg_thing.folders['data'], d))
-            MetadataCatalog.get(self.name + d).set(thing_classes=self.classes)
-            MetadataCatalog.get(self.name + d).set(thing_colors=self.colors)
+            MetadataCatalog.get(self.name + '_' + d).set(thing_classes=self.classes)
+            MetadataCatalog.get(self.name + '_' + d).set(thing_colors=self.colors)
         # return MetadataCatalog.get("oyster_train")
 
     def setModel(self):
@@ -102,8 +102,8 @@ class Thing:
 
     def evaluate(self):
         self.cfg_dtc.DATASETS.TEST = (self.name + "_val",)
-        self.evaluator = COCOEvaluator(self.name + "_val", self.cfg, False, output_dir=self.cfg_dtc.OUTPUT_DIR)
-        val_loader = build_detection_test_loader(self.cfg, self.name + "_val")
+        self.evaluator = COCOEvaluator(self.name + "_val", self.cfg_dtc, False, output_dir=self.cfg_dtc.OUTPUT_DIR)
+        val_loader = build_detection_test_loader(self.cfg_dtc, self.name + "_val")
         self.results = inference_on_dataset(self.trainer.model, val_loader, self.evaluator)
         self.cfg_thing.log(self.results)
 
