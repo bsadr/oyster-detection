@@ -456,7 +456,8 @@ class Stream:
         )
         # put text on labels
         org = (int(0.7*pad), int(0.7*pad))
-        labels = [cv2.putText(l, texts[i], org, cv2.FONT_HERSHEY_DUPLEX, .7, (125, 255, 0), 1, cv2.LINE_AA) for i, l in enumerate(labels)]
+#        labels = [cv2.putText(l, texts[i], org, cv2.FONT_HERSHEY_DUPLEX, .7, (125, 255, 0), 1, cv2.LINE_AA) for i, l in enumerate(labels)]
+        labels = [cv2.putText(l, texts[i], org, cv2.FONT_HERSHEY_DUPLEX, .7, (12, 25, 0), 1, cv2.LINE_AA) for i, l in enumerate(labels)]
         # vertical splitter pad
         splitter = np.ones(shape=[int(dim[1]+pad), pad, 3], dtype=np.uint8)*255
         # stack labels and frames

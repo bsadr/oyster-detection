@@ -13,7 +13,7 @@ parser.add_argument("-p", required=False,
                     help="whether or not predict the val images")
 args = parser.parse_args()
 cfg_id = int(args.cfg_id)
-oyster = Thing( cfg_id)
+oyster = Thing(cfg_id)
 oyster.register()
 oyster.train()
 oyster.evaluate()

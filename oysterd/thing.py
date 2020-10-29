@@ -25,8 +25,11 @@ from config import Config, InputType
 class Thing:
     def __init__(self, model_id=0):
         self.name = "oyster"
-        self.classes = ["oyster", "dead"]
-        self.colors = [[0, 255, 0], [0, 0, 255]]
+        self.classes = ["live_oyster"]
+        self.colors = [[0, 255, 0]]
+        # self.classes = ["oyster", "dead"]
+        # self.colors = [[0, 255, 0], [0, 0, 255]]
+
 
         self.model_id = model_id
         self.cfg_thing = Config(model_id)
@@ -41,18 +44,18 @@ class Thing:
         self.predictor = None
 
     def register(self):
-        for d in ["_train", "_val"]:
+        for d in ["train", "val"]:
             if self.cfg_thing.input == InputType.labelme:
-                DatasetCatalog.register(self.name + d,
+                DatasetCatalog.register(self.name + '_'+ d,
                                         lambda d=d: labelmeDict(self.cfg_thing.folders['data'], d))
             elif self.cfg_thing.input == InputType.makesense:
-                DatasetCatalog.register(self.name + d,
+                DatasetCatalog.register(self.name + '_'+ d,
                                         lambda d=d: makesenseDict(self.cfg_thing.folders['data'], d))
             elif self.cfg_thing.input == InputType.voc:
-                DatasetCatalog.register(self.name + d,
+                DatasetCatalog.register(self.name + '_'+ d,
                                         lambda d=d: vocDict(self.cfg_thing.folders['data'], d))
-            MetadataCatalog.get(self.name + d).set(thing_classes=self.classes)
-            MetadataCatalog.get(self.name + d).set(thing_colors=self.colors)
+            MetadataCatalog.get(self.name + '_'+ d).set(thing_classes=self.classes)
+            MetadataCatalog.get(self.name + '_'+ d).set(thing_colors=self.colors)
         # return MetadataCatalog.get("oyster_train")
 
     def setModel(self):
@@ -72,9 +75,10 @@ class Thing:
         # results = inference_on_dataset(trainer.model, val_loader, evaluator)     
         self.metadata = self.MetadataCatalog.get(self.name + "_train")
         self.cfg_dtc.MODEL.WEIGHTS = os.path.join(self.cfg_thing.folders['weights'], self.cfg_thing.MODEL_WEIGHTS[0])
-        self.cfg_dtc.MODEL.ROI_HEADS.SCORE_THRESH_TEST = self.cfg_thing.thresh_percent * .01
+        self.cfg_dtc.MODEL.ROI_HEADS.SCORE_THRESH_TEST = self.cfg_thing.ROI_HEADS_THRESH * .01
         self.predictor = DefaultPredictor(self.cfg_dtc)
-        self.cfg_dtc.MODEL.RPN.NMS_THRESH = 0.7
+        self.cfg_dtc.MODEL.RPN.NMS_THRESH = self.cfg_thing.RPN_NMS_THRESH
+#        self.cfg_dtc.MODEL.RPN.NMS_THRESH = 0.7
     #    cfg.TEST.DETECTION_PER_IMAGE = 40
     #    cfg.MODEL.RPN.PRE_NMS_TOPK_TEST = 9000
     #    cfg.MODEL.RPN.POST_NMS_TOPK_TEST = 1500
@@ -102,18 +106,20 @@ class Thing:
 
     def evaluate(self):
         self.cfg_dtc.DATASETS.TEST = (self.name + "_val",)
-        self.evaluator = COCOEvaluator(self.name + "_val", self.cfg, False, output_dir=self.cfg_dtc.OUTPUT_DIR)
-        val_loader = build_detection_test_loader(self.cfg, self.name + "_val")
+        self.evaluator = COCOEvaluator(self.name + "_val", self.cfg_dtc, False, output_dir=self.cfg_dtc.OUTPUT_DIR)
+        val_loader = build_detection_test_loader(self.cfg_dtc, self.name + "_val")
         self.results = inference_on_dataset(self.trainer.model, val_loader, self.evaluator)
         self.cfg_thing.log(self.results)
+        self.cfg_thing.debug(self.results)
 
     def infer(self, folder=None):
         oyster_metadata = self.MetadataCatalog.get(self.name + "_train")
         # cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, self.cfg_thing.MODEL_WEIGHTS[0])
         self.cfg_dtc.MODEL.WEIGHTS = os.path.join(self.cfg_thing.folders['weights'], self.cfg_thing.MODEL_WEIGHTS[0])
-        self.cfg_dtc.MODEL.ROI_HEADS.SCORE_THRESH_TEST = self.cfg_thing.thresh_percent * .01
+        self.cfg_dtc.MODEL.ROI_HEADS.SCORE_THRESH_TEST = self.cfg_thing.ROI_HEADS_THRESH * .01
 
-        self.cfg_dtc.MODEL.RPN.NMS_THRESH = 0.7
+        self.cfg_dtc.MODEL.RPN.NMS_THRESH = self.cfg_thing.RPN_NMS_THRESH
+#        self.cfg_dtc.MODEL.RPN.NMS_THRESH = 0.7
     #    cfg.TEST.DETECTION_PER_IMAGE = 40
     #    cfg.MODEL.RPN.PRE_NMS_TOPK_TEST = 9000
     #    cfg.MODEL.RPN.POST_NMS_TOPK_TEST = 1500

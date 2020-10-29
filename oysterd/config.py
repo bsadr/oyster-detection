@@ -11,29 +11,37 @@ class InputType(Enum):
 
 
 class Config:
-#    show_debug = True
-    show_debug = False
+    show_debug = True
+#    show_debug = False
     folders = dict(
         # data: training and evaluation data folder 
         data="/home/bsadrfa/behzad/projects/data_oyster/db2/",  
         # infer: test/inferrence folder, will be overriden if a folder passed to thing.infer() in thing.py
         infer="/home/bsadrfa/behzad/projects/oyster/video/video_20870",
         # output: output folder
-        output="/home/bsadrfa/behzad/projects/oyster/output/frames/",
+#        output="/home/bsadrfa/behzad/projects/oyster/output/frames/",
+        output="/home/bsadrfa/behzad/projects/oyster/output/2020",
         # weights: weights folder used inference/test
-        weights="/home/bsadrfa/behzad/projects/oyster/oyster-detection/output/00/"
+#        weights="/home/bsadrfa/behzad/projects/oyster/oyster-detection/output/00/"
+        weights="/home/bsadrfa/behzad/projects/oyster/oyster-detection/output/2020/00/"
     )
     video = dict(
-#        path = "/home/bsadrfa/behzad/projects/data_oyster/video/GH020870.MP4",
         path = "/home/bsadrfa/behzad/projects/data_oyster/video/GH010869.MP4",
         fps = -1,
         fs = 7500,
         fe = 7800,
         tmp = "/scratch2/bsadrfa/oyster/tmp2/sample2"
     )
+#    video = dict(
+#        path = "/home/bsadrfa/behzad/projects/data_oyster/video/GH020870.MP4",
+#        fps = -1,
+#        fs = 2685,
+#        fe = 2785,
+#        tmp = "/scratch2/bsadrfa/oyster/tmp2/sample1"
+#    )
     SOLVER_IMS_PER_BATCH = 2
     SOLVER_BASE_LR = 0.00025
-    SOLVER_MAX_ITER =  1000
+    SOLVER_MAX_ITER =  300
     config_file = [
         "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml",
         "COCO-InstanceSegmentation/mask_rcnn_R_50_DC5_3x.yaml",
@@ -51,7 +59,8 @@ class Config:
     MODEL_WEIGHTS = ["model_final.pth"]
 
 #    thresh_percent = 60
-    thresh_percent = 95
+    ROI_HEADS_THRESH = 80 
+    RPN_NMS_THRESH = 70
     input = InputType.labelme
 
     def __init__(self, cfg_id=0):
@@ -71,7 +80,8 @@ class Config:
             SOLVER_MAX_ITER=self.SOLVER_MAX_ITER,
             config_file=self.config_file[self.cfg_id],
             resume=self.resume,
-            thresh_percent=self.thresh_percent,
+            ROI_HEADS_THRESH=self.ROI_HEADS_THRESH,
+            RPN_NMS_THRESH=self.RPN_NMS_THRESH,
             id=self.cfg_id,
             datetime=self.datetime,
         )
