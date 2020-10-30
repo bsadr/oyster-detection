@@ -86,6 +86,7 @@ class Thing:
         # Let training initialize from model zoo
         self.cfg_dtc.merge_from_file(model_zoo.get_config_file(self.cfg_thing.config_file[self.model_id]))
         self.cfg_dtc.DATASETS.TRAIN = (self.name + "_train",)
+        self.cfg_dtc.DATASETS.TEST = (self.name + "_val",)
         self.cfg_dtc.DATALOADER.NUM_WORKERS = 2
         self.cfg_dtc.MODEL.WEIGHTS = model_zoo.get_checkpoint_url(self.cfg_thing.config_file[self.model_id])
         self.cfg_dtc.SOLVER.IMS_PER_BATCH = 2
