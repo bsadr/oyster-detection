@@ -15,19 +15,22 @@ class Config:
 #    show_debug = False
     classes = ["live oyster", "shell", "dead oyster"]
     class_id = {"oyster": 0, "live oyster": 0, "shell": 1, "dead": 2, "dead oyster" : 2}
+    id_label = dict(zip(list(range(len(classes))), classes))
     colors = [[0, 255, 0], [0, 0, 255], [255, 0, 0]]
     num_classes = 3
     folders = dict(
         # data: training and evaluation data folder 
-        data="/home/bsadrfa/behzad/projects/data_oyster/db3b/",  
+        data="/home/bsadrfa/behzad/projects/data_oyster/dbng_full/",  
         # infer: test/inferrence folder, will be overriden if a folder passed to thing.infer() in thing.py
         # infer="/home/bsadrfa/behzad/projects/oyster/video/video_20870",
         # output: output folder
         # output="/home/bsadrfa/behzad/projects/oyster/output/frames/",
-        output="/home/bsadrfa/behzad/projects/oyster/output/db3b",
+        infer = "/home/bsadrfa/behzad/projects/oyster/ngc/test/Doug_deployment_20190406",
+        # infer="/home/bsadrfa/behzad/projects/data_oyster/dbng_full/img/val/",  
+        output="/home/bsadrfa/behzad/projects/oyster/output/dbng_full/test/Doug_deployment_20190406",
         # weights: weights folder used inference/test
         # weights="/home/bsadrfa/behzad/projects/oyster/oyster-detection/output/00/"
-        weights="/home/bsadrfa/behzad/projects/oyster/output/db3b/06/"
+        weights="/home/bsadrfa/behzad/projects/oyster/output/dbng_full/val/00/"
     )
     video = dict(
         path = "/home/bsadrfa/behzad/projects/data_oyster/video/GH010869.MP4",
@@ -45,7 +48,7 @@ class Config:
 #    )
     SOLVER_IMS_PER_BATCH = 2
     SOLVER_BASE_LR = 0.00025
-    SOLVER_MAX_ITER =  2000
+    SOLVER_MAX_ITER =  10000
     config_file = [
         "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml",
         "COCO-InstanceSegmentation/mask_rcnn_R_50_DC5_3x.yaml",

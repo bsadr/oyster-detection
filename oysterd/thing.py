@@ -19,7 +19,7 @@ import os
 import cv2
 import numpy as np
 # oyster detection
-from annotations import labelmeDict, makesenseDict, simpleDict
+from annotations import labelmeDict, makesenseDict, simpleDict, makeShapes, toLabelme
 from config import Config, InputType
 
 class Thing:
@@ -27,7 +27,7 @@ class Thing:
         self.name = "oyster"
         self.model_id = model_id
         self.cfg_thing = Config(model_id)
-        self.classes = self.cfg_thing.classes
+        self.classes = self.cfg_thing.classes        
         self.colors = self.cfg_thing.colors
         self.num_classes = self.cfg_thing.num_classes
 #        self.classes = ["live oyster", "shell", "dead oyster"]
@@ -131,7 +131,7 @@ class Thing:
     #    cfg.TEST.DETECTION_PER_IMAGE = 40
     #    cfg.MODEL.RPN.PRE_NMS_TOPK_TEST = 9000
     #    cfg.MODEL.RPN.POST_NMS_TOPK_TEST = 1500
-        
+        export_labels = True       
         self.predictor = DefaultPredictor(self.cfg_dtc)
         if folder is not None:
             print('folder infer: {}'.format(folder))
@@ -165,9 +165,12 @@ class Thing:
                 cv2.imwrite(os.path.join(in_dir, 'in_' + d["image_id"]),
                             v.get_image()[:, :, ::-1])      
         elif 'infer' in self.cfg_thing.folders:
-            dataset_dicts = simpleDict(self.cfg_thing.folders['infer'])
+            dataset_dicts = simpleDict(self.cfg_thing.folders['infer'])          
             pr_dir = os.path.join(self.cfg_dtc.OUTPUT_DIR, 'infer')
             os.makedirs(pr_dir, exist_ok=True)
+            if export_labels:
+                ann_dir = os.path.join(self.cfg_dtc.OUTPUT_DIR, f'export_json/')
+                os.makedirs(ann_dir, exist_ok=True)       
             for d in dataset_dicts:
                 im = cv2.imread(d["file_name"])
                 bk = np.zeros(shape=[d["height"], d["width"], 3], dtype=np.uint8)
@@ -179,36 +182,55 @@ class Thing:
                 mask = (predictions.pred_masks.any(dim=0) > 0).numpy()
                 bk[mask] = im[mask]
                 print(os.path.join(pr_dir, d["image_id"]))
-                cv2.imwrite(os.path.join(pr_dir, d["image_id"]), bk)
-        else: #val folder
+                # cv2.imwrite(os.path.join(pr_dir, d["image_id"]), bk)                                        
+                v = Visualizer(im[:, :, ::-1],
+                            metadata=oyster_metadata,
+                            scale=0.625,
+                            instance_mode=ColorMode.IMAGE
+                            )
+                v._default_font_size *= 0.7
+                v = v.draw_instance_predictions(predictions)
+                cv2.imwrite(os.path.join(pr_dir, d["image_id"]),
+                            v.get_image()[:, :, ::-1])                                   
+
+                if export_labels:
+                    os.makedirs(pr_dir, exist_ok=True)                   
+                    masks = np.asarray(predictions.pred_masks)
+                    labels = predictions.pred_classes if predictions.has("pred_classes") else None
+                    shapes, contours = makeShapes(masks, labels)
+                    if len(shapes)>0 :
+                        fname = os.path.join(ann_dir, d["image_id"].split('.')[0]) + ".json"
+                        toLabelme(fname, shapes, d["image_id"], d["height"], d["width"])
+        else: # dataset folders
             for dset in ("val", "train"):
                 dataset_dicts = labelmeDict(self.cfg_thing.folders['data'], dset)       
                 pr_dir = os.path.join(self.cfg_dtc.OUTPUT_DIR, f'predictions/{dset}')
                 os.makedirs(pr_dir, exist_ok=True)
+
+                if export_labels:
+                    ann_dir = os.path.join(self.cfg_dtc.OUTPUT_DIR, f'export_json/{dset}')
+                    os.makedirs(ann_dir, exist_ok=True)
             
                 for d in dataset_dicts:
                     im = cv2.imread(d["file_name"])
-                    bk = np.zeros(shape=[d["height"], d["width"], 3], dtype=np.uint8)
+
                     # Prediction
                     outputs = self.predictor(im)
                     v = Visualizer(im[:, :, ::-1],
                                 metadata=oyster_metadata,
                                 scale=0.625,
                                 instance_mode=ColorMode.IMAGE
-                                # instance_mode=ColorMode.IMAGE_BW   # remove the colors of unsegmented pixels
                                 )
-                    v._default_font_size *= 2.5
-                    v = v.draw_instance_predictions(outputs["instances"].to("cpu"))
-                    # cv2.imwrite(os.path.join(pr_dir, d["image_id"]),
-                    #             v.get_image()[:, :, ::-1])
+                    v._default_font_size *= 0.7
+                    predictions = outputs["instances"].to("cpu")
+                    v = v.draw_instance_predictions(predictions)
                     f1 = v.get_image()[:, :, ::-1]
+
                     # Ground Truth
                     img = cv2.imread(d["file_name"])
                     visualizer = Visualizer(img[:, :, ::-1], metadata=oyster_metadata, scale=.625)
                     visualizer._default_font_size *= 2.5
                     vis = visualizer.draw_dataset_dict(d)
-                    # cv2.imwrite(os.path.join(gt_dir, d["image_id"]),
-                    #             vis.get_image()[:, :, ::-1])
                     f2 = vis.get_image()[:, :, ::-1]                          
 
                     zoom_factor = 1.0
@@ -234,3 +256,12 @@ class Thing:
                     stacked_frame = np.concatenate((frames[0], splitter, frames[1]), axis=1)
                     cv2.imwrite(os.path.join(pr_dir, d["image_id"]), stacked_frame)
                     print(f"{dset}/{d['image_id']}")
+                    
+                    if export_labels:
+                        os.makedirs(pr_dir, exist_ok=True)                   
+                        masks = np.asarray(predictions.pred_masks)
+                        labels = predictions.pred_classes if predictions.has("pred_classes") else None
+                        shapes, contours = makeShapes(masks, labels)
+                        if len(shapes)>0 :
+                            fname = os.path.join(ann_dir, d["image_id"].split('.')[0]) + ".json"
+                            toLabelme(fname, shapes, d["image_id"], d["height"], d["width"])
