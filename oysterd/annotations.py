@@ -8,6 +8,7 @@ from detectron2.structures import BoxMode
 from detectron2.utils.visualizer import Visualizer
 from detectron2.utils.visualizer import ColorMode
 from detectron2.data import DatasetCatalog, MetadataCatalog
+from config import Config
 
 import shutil
 
@@ -62,6 +63,7 @@ def labelmeDict(data_dir, sub_dir):
     json_files = [os.path.join(json_dir, f) for f in listdir(json_dir)
                   if isfile(join(json_dir, f)) and f.lower().split('.')[-1] == 'json']
     dataset_dicts = []
+    n_i = 0
     for json_file in json_files:
         with open(json_file) as f:
             label_me = json.load(f)
@@ -84,16 +86,23 @@ def labelmeDict(data_dir, sub_dir):
                     py.append(p[1])
                 poly = [(x + 0.5, y + 0.5) for x, y in zip(px, py)]
                 poly = [p for x in poly for p in x]
+                label = shape["label"]
                 obj = {
                     "bbox": [np.min(px), np.min(py), np.max(px), np.max(py)],
                     "bbox_mode": BoxMode.XYXY_ABS,
                     "segmentation": [poly],
-                    "category_id": 0,
+#                    "category_id": 0,
+                    "category_id": Config.class_id[label],
                     "iscrowd": 0
                 }
-                objs.append(obj)
+                if Config.class_id[label] < Config.num_classes :
+                    objs.append(obj)
+                    n_i += 1
+#                objs.append(obj)
             record["annotations"] = objs
             dataset_dicts.append(record)
+    print ("---------------------------")
+    print (f"Number of instances : {n_i}")
     return dataset_dicts
 
 

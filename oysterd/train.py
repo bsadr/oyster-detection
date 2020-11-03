@@ -18,5 +18,5 @@ oyster.register()
 oyster.train()
 oyster.evaluate()
 
-if args.predict:
-    oyster.infer()
+#if args.predict:
+#    oyster.infer()

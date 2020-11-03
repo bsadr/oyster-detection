@@ -1,7 +1,7 @@
 .idea
 .vscode
 env
-env2
+venv2
 *.pyc
 output
 logs
