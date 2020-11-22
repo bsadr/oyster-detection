@@ -11,41 +11,57 @@ class InputType(Enum):
 
 
 class Config:
-    show_debug = True
-#    show_debug = False
+#    show_debug = True
+    show_debug = False
     classes = ["live oyster", "shell", "dead oyster"]
     class_id = {"oyster": 0, "live oyster": 0, "shell": 1, "dead": 2, "dead oyster" : 2}
     id_label = dict(zip(list(range(len(classes))), classes))
     colors = [[0, 255, 0], [0, 0, 255], [255, 0, 0]]
-    num_classes = 3
+    num_classes = 1
     folders = dict(
         # data: training and evaluation data folder 
-        data="/home/bsadrfa/behzad/projects/data_oyster/dbng_full/",  
+        # data="/home/bsadrfa/behzad/projects/data_oyster/dbng_full/",  
+        data="/home/bsadrfa/behzad/projects/data_oyster/db2/",  
         # infer: test/inferrence folder, will be overriden if a folder passed to thing.infer() in thing.py
         # infer="/home/bsadrfa/behzad/projects/oyster/video/video_20870",
         # output: output folder
-        # output="/home/bsadrfa/behzad/projects/oyster/output/frames/",
-        infer = "/home/bsadrfa/behzad/projects/oyster/ngc/test/Doug_deployment_20190406",
+        output="/home/bsadrfa/behzad/projects/oyster/output/frames/",
+        # infer = "/home/bsadrfa/behzad/projects/oyster/ngc/test/Doug_deployment_20190406",
+        # infer = "/home/bsadrfa/Downloads/v1",
         # infer="/home/bsadrfa/behzad/projects/data_oyster/dbng_full/img/val/",  
-        output="/home/bsadrfa/behzad/projects/oyster/output/dbng_full/test/Doug_deployment_20190406",
+        # output="/home/bsadrfa/behzad/projects/oyster/output/dbng_full/test/v1",
         # weights: weights folder used inference/test
-        # weights="/home/bsadrfa/behzad/projects/oyster/oyster-detection/output/00/"
-        weights="/home/bsadrfa/behzad/projects/oyster/output/dbng_full/val/00/"
+        weights="/home/bsadrfa/behzad/projects/oyster/oyster-detection/output/00"
+        # weights="/home/bsadrfa/behzad/projects/oyster/output/dbng_full/val/00/"
     )
-    video = dict(
-        path = "/home/bsadrfa/behzad/projects/data_oyster/video/GH010869.MP4",
-        fps = -1,
-        fs = 7500,
-        fe = 7800,
-        tmp = "/scratch2/bsadrfa/oyster/tmp2/sample2"
-    )
+#    video = dict(
+#        path = "/scratch2/bsadrfa/oyster/GH010870.MP4",
+#        fps = -1,
+#        fs = 29500,
+#        fe = 30000,
+#        tmp = "/scratch2/bsadrfa/oyster/tmp2/sample4"
+#    )
 #    video = dict(
 #        path = "/home/bsadrfa/behzad/projects/data_oyster/video/GH020870.MP4",
 #        fps = -1,
-#        fs = 2685,
-#        fe = 2785,
-#        tmp = "/scratch2/bsadrfa/oyster/tmp2/sample1"
+#        fs = 2500,
+#        fe = 3328,
+#        tmp = "/scratch2/bsadrfa/oyster/tmp2/sample3"
 #    )
+#    video = dict(
+#        path = "/home/bsadrfa/behzad/projects/data_oyster/video/GH010869.MP4",
+#        fps = -1,
+#        fs = 7500,
+#        fe = 7800,
+#        tmp = "/scratch2/bsadrfa/oyster/tmp2/sample2"
+#    )
+    video = dict(
+        path = "/home/bsadrfa/behzad/projects/data_oyster/video/GH020870.MP4",
+        fps = -1,
+        fs = 2685,
+        fe = 2785,
+        tmp = "/scratch2/bsadrfa/oyster/tmp2/sample1"
+    )
     SOLVER_IMS_PER_BATCH = 2
     SOLVER_BASE_LR = 0.00025
     SOLVER_MAX_ITER =  10000
@@ -66,7 +82,8 @@ class Config:
     MODEL_WEIGHTS = ["model_final.pth"]
 
 #    thresh_percent = 60
-    ROI_HEADS_THRESH = 70 
+#    ROI_HEADS_THRESH = 70 
+    ROI_HEADS_THRESH = 95 
     RPN_NMS_THRESH = 70
     input = InputType.labelme
 

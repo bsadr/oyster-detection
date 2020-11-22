@@ -157,6 +157,11 @@ class Stream:
                 # cv2.imshow('{:04d}'.format(frame_number), self.stacked_frame)
                 # store last frame
                 self.prv_frame = self.cur_frame
+
+                if self.count > 117:
+                    print(self.count)
+                    break
+
             frame_number += 1
             pbar.update()
         pbar.close()
@@ -165,8 +170,8 @@ class Stream:
         height, width, _ =  self.stacked_frame.shape
         # fourcc = cv2.VideoWriter_fourcc(*'XVID')
         fourcc = cv2.VideoWriter_fourcc(*'MJPG')
-        # video = cv2.VideoWriter(os.path.join(tmpPath, Path(vdata['path']).stem+'_count.avi'), fourcc, int(set_fps), (width,height))
-        video = cv2.VideoWriter(os.path.join(tmpPath, Path(vdata['path']).stem+'_count.avi'), fourcc, 5, (width,height))
+        #video = cv2.VideoWriter(os.path.join(tmpPath, Path(vdata['path']).stem+'_count.avi'), fourcc, int(set_fps), (width,height))
+        video = cv2.VideoWriter(os.path.join(tmpPath, Path(vdata['path']).stem+'_count.avi'), fourcc, 10, (width,height))
         stacked_files = [join(tmpPath, f) for f in listdir(tmpPath)
                     if isfile(join(tmpPath, f)) and f.lower().split('.')[-1] in image_types]
         stacked_files.sort()
@@ -247,7 +252,7 @@ class Stream:
         # fourcc = cv2.VideoWriter_fourcc(*'XVID')
         fourcc = cv2.VideoWriter_fourcc(*'MJPG')
         # video = cv2.VideoWriter(os.path.join(tmpPath, Path(vdata['path']).stem+'_count.avi'), fourcc, int(set_fps), (width,height))
-        video = cv2.VideoWriter(os.path.join(tmpPath, Path(vdata['path']).stem+f"_{newfps}.avi"), fourcc, 5, (width,height))
+        video = cv2.VideoWriter(os.path.join(tmpPath, Path(vdata['path']).stem+f"_{newfps}.avi"), fourcc, 12, (width,height))
         pbar = tqdm(total=len(stacked_files), unit=" frames")
         for f in stacked_files:
             video.write(cv2.imread(f))

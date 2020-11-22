@@ -40,4 +40,5 @@ vdata = dict (
 )
 stream = Stream(thing, vdata)
 #stream.countVideo()
-stream.extractVideo()
+#stream.extractVideo()
+stream.lastVideo()
