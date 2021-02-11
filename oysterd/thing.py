@@ -120,6 +120,34 @@ class Thing:
         self.cfg_thing.log(self.results)
         self.cfg_thing.debug(self.results)
 
+    def infer_image(self, image=None):
+        oyster_metadata = self.MetadataCatalog.get(self.name + "_train")
+        # cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, self.cfg_thing.MODEL_WEIGHTS[0])
+        self.cfg_dtc.MODEL.WEIGHTS = os.path.join(self.cfg_thing.folders['weights'], self.cfg_thing.MODEL_WEIGHTS[0])
+        #self.cfg_dtc.MODEL.WEIGHTS = os.path.join(self.cfg_thing.folders['weights'], "model_11000.pth")
+        self.cfg_dtc.MODEL.ROI_HEADS.SCORE_THRESH_TEST = self.cfg_thing.ROI_HEADS_THRESH * .01
+        self.cfg_dtc.MODEL.RPN.NMS_THRESH = self.cfg_thing.RPN_NMS_THRESH
+        self.cfg_dtc.MODEL.DEVICE='cpu'
+    #    self.cfg_dtc.MODEL.RPN.NMS_THRESH = 0.7
+    #    cfg.TEST.DETECTION_PER_IMAGE = 40
+    #    cfg.MODEL.RPN.PRE_NMS_TOPK_TEST = 9000
+    #    cfg.MODEL.RPN.POST_NMS_TOPK_TEST = 1500
+        self.predictor = DefaultPredictor(self.cfg_dtc)
+        #import pdb; pdb.set_trace()
+        if image is not None:
+            im = cv2.imread(image)
+            outputs = self.predictor(im)
+            predictions = outputs["instances"].to("cpu")
+            pred_output = getattr(outputs['instances'],'pred_classes')
+            total = len(pred_output)
+            alive = np.count_nonzero(pred_output)
+            dead = np.count_nonzero(pred_output==2)
+            #import pdb; pdb.set_trace()
+            return([total,alive,dead])
+        else:
+            retrun('Please enter correct image directory')                
+        
+
     def infer(self, folder=None):
         oyster_metadata = self.MetadataCatalog.get(self.name + "_train")
         # cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, self.cfg_thing.MODEL_WEIGHTS[0])
