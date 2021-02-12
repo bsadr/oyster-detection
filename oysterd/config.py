@@ -25,7 +25,8 @@ class Config:
         # infer: test/inferrence folder, will be overriden if a folder passed to thing.infer() in thing.py
         # infer="/home/bsadrfa/behzad/projects/oyster/video/video_20870",
         # output: output folder
-        output="/home/bsadrfa/behzad/projects/oyster/output/frames/",
+        # output="/home/bsadrfa/behzad/projects/oyster/output/frames/",
+        output="/home/bsadrfa/behzad/projects/oyster/output/comparisons/",
         # infer = "/home/bsadrfa/behzad/projects/oyster/ngc/test/Doug_deployment_20190406",
         # infer = "/home/bsadrfa/Downloads/v1",
         # infer="/home/bsadrfa/behzad/projects/data_oyster/dbng_full/img/val/",  
@@ -72,11 +73,16 @@ class Config:
         "COCO-InstanceSegmentation/mask_rcnn_R_101_FPN_3x.yaml",
         "COCO-InstanceSegmentation/mask_rcnn_R_101_DC5_3x.yaml",
         "COCO-InstanceSegmentation/mask_rcnn_R_101_C4_3x.yaml",
-        "COCO-Detection/retinanet_R_50_FPN_3x.yaml",
+        "COCO-Detection/retinanet_R_50_FPN_3x.yaml", # RetinaNet
         "COCO-Detection/retinanet_R_101_FPN_3x.yaml",
         "COCO-Detection/rpn_R_50_FPN_1x.yaml",
         "COCO-Detection/rpn_R_50_C4_1x.yaml",
-        "COCO-Detection/fast_rcnn_R_50_FPN_1x.yaml"
+        "COCO-Detection/fast_rcnn_R_50_FPN_1x.yaml",
+        "COCO-InstanceSegmentation/mask_rcnn_X_101_32x8d_FPN_3x.yaml",
+        "Misc/cascade_mask_rcnn_R_50_FPN_1x.yaml", # Cascade RCNN
+        "Misc/cascade_mask_rcnn_R_50_FPN_3x.yaml", # Cascade RCNN
+        "Misc/mask_rcnn_R_50_FPN_1x_dconv_c3-c5.yaml", # Deformable Conv
+        "Misc/mask_rcnn_R_50_FPN_3x_dconv_c3-c5.yaml", # Deformable Conv
     ]
     resume = False # whether or not to resume/restart the training
     MODEL_WEIGHTS = ["model_final.pth"]

@@ -30,14 +30,12 @@ class Thing:
         self.classes = self.cfg_thing.classes        
         self.colors = self.cfg_thing.colors
         self.num_classes = self.cfg_thing.num_classes
-#        self.classes = ["live oyster", "shell", "dead oyster"]
-#        self.colors = [[0, 255, 0], [0, 0, 255], [255, 0, 0]]
 
         assert (self.model_id <= len(self.cfg_thing.config_file))
 
         self.cfg_dtc = get_cfg()
         self.MetadataCatalog = MetadataCatalog
-        self.metdata = None
+        self.metadata = None
         self.trainer = None
         self.evaluator = None
         self.results = None
@@ -56,7 +54,6 @@ class Thing:
                                         lambda d=d: vocDict(self.cfg_thing.folders['data'], d))
             MetadataCatalog.get(self.name + '_'+ d).set(thing_classes=self.classes)
             MetadataCatalog.get(self.name + '_'+ d).set(thing_colors=self.colors)
-        # return MetadataCatalog.get("oyster_train")
 
     def setModel(self):
         self.cfg_dtc.OUTPUT_DIR = os.path.join(self.cfg_thing.folders['output'], '{:02d}'.format(self.model_id))
@@ -71,15 +68,11 @@ class Thing:
         self.cfg_dtc.SOLVER.MAX_ITER = self.cfg_thing.SOLVER_MAX_ITER
         self.cfg_dtc.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 256  # faster, and good enough for this toy dataset (default: 512)
         self.cfg_dtc.MODEL.ROI_HEADS.NUM_CLASSES = self.num_classes
-        # evaluator = COCOEvaluator("oyster_val", cfg, False, output_dir=cfg.OUTPUT_DIR)
-        # val_loader = build_detection_test_loader(cfg, "oyster_val")
-        # results = inference_on_dataset(trainer.model, val_loader, evaluator)     
         self.metadata = self.MetadataCatalog.get(self.name + "_train")
         self.cfg_dtc.MODEL.WEIGHTS = os.path.join(self.cfg_thing.folders['weights'], self.cfg_thing.MODEL_WEIGHTS[0])
         self.cfg_dtc.MODEL.ROI_HEADS.SCORE_THRESH_TEST = self.cfg_thing.ROI_HEADS_THRESH * .01
         self.predictor = DefaultPredictor(self.cfg_dtc)
         self.cfg_dtc.MODEL.RPN.NMS_THRESH = self.cfg_thing.RPN_NMS_THRESH
-    #    self.cfg_dtc.MODEL.RPN.NMS_THRESH = 0.7
     #    cfg.TEST.DETECTION_PER_IMAGE = 40
     #    cfg.MODEL.RPN.PRE_NMS_TOPK_TEST = 9000
     #    cfg.MODEL.RPN.POST_NMS_TOPK_TEST = 1500
@@ -108,7 +101,6 @@ class Thing:
 
     def evaluate(self):
     
-        oyster_metadata = self.MetadataCatalog.get(self.name + "_train")
         self.cfg_dtc.MODEL.WEIGHTS = os.path.join(self.cfg_thing.folders['weights'], self.cfg_thing.MODEL_WEIGHTS[0])
         self.cfg_dtc.MODEL.ROI_HEADS.SCORE_THRESH_TEST = self.cfg_thing.ROI_HEADS_THRESH * .01
         self.cfg_dtc.MODEL.RPN.NMS_THRESH = self.cfg_thing.RPN_NMS_THRESH
@@ -121,7 +113,6 @@ class Thing:
         self.cfg_thing.debug(self.results)
 
     def infer_image(self, image=None):
-        oyster_metadata = self.MetadataCatalog.get(self.name + "_train")
         # cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, self.cfg_thing.MODEL_WEIGHTS[0])
         self.cfg_dtc.MODEL.WEIGHTS = os.path.join(self.cfg_thing.folders['weights'], self.cfg_thing.MODEL_WEIGHTS[0])
         #self.cfg_dtc.MODEL.WEIGHTS = os.path.join(self.cfg_thing.folders['weights'], "model_11000.pth")
@@ -149,8 +140,6 @@ class Thing:
         
 
     def infer(self, folder=None):
-        oyster_metadata = self.MetadataCatalog.get(self.name + "_train")
-        # cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, self.cfg_thing.MODEL_WEIGHTS[0])
         self.cfg_dtc.MODEL.WEIGHTS = os.path.join(self.cfg_thing.folders['weights'], self.cfg_thing.MODEL_WEIGHTS[0])
         self.cfg_dtc.MODEL.ROI_HEADS.SCORE_THRESH_TEST = self.cfg_thing.ROI_HEADS_THRESH * .01
 
@@ -183,7 +172,7 @@ class Thing:
                 print(os.path.join(pr_dir, d["image_id"]))
                 cv2.imwrite(os.path.join(bk_dir, 'bk_' + d["image_id"]), bk)
                 v = Visualizer(im[:, :, ::-1],
-                            metadata=oyster_metadata,
+                            metadata=self.metadata,
                             scale=0.625,
                             instance_mode=ColorMode.IMAGE
                             # instance_mode=ColorMode.IMAGE_BW   # remove the colors of unsegmented pixels
@@ -212,7 +201,7 @@ class Thing:
                 print(os.path.join(pr_dir, d["image_id"]))
                 # cv2.imwrite(os.path.join(pr_dir, d["image_id"]), bk)                                        
                 v = Visualizer(im[:, :, ::-1],
-                            metadata=oyster_metadata,
+                            metadata=self.metadata,
                             scale=0.625,
                             instance_mode=ColorMode.IMAGE
                             )
@@ -245,7 +234,7 @@ class Thing:
                     # Prediction
                     outputs = self.predictor(im)
                     v = Visualizer(im[:, :, ::-1],
-                                metadata=oyster_metadata,
+                                metadata=self.metadata,
                                 scale=0.625,
                                 instance_mode=ColorMode.IMAGE
                                 )
@@ -256,7 +245,7 @@ class Thing:
 
                     # Ground Truth
                     img = cv2.imread(d["file_name"])
-                    visualizer = Visualizer(img[:, :, ::-1], metadata=oyster_metadata, scale=.625)
+                    visualizer = Visualizer(img[:, :, ::-1], metadata=self.metadata, scale=.625)
                     visualizer._default_font_size *= 2.5
                     vis = visualizer.draw_dataset_dict(d)
                     f2 = vis.get_image()[:, :, ::-1]                          
